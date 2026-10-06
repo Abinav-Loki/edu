@@ -7,6 +7,11 @@ import {
   AlarmClock,
   ArrowRight,
   Sparkles,
+  PlayCircle,
+  FileQuestion,
+  BookOpen as BookOpenIcon,
+  UploadCloud,
+  Bot
 } from "lucide-react";
 import { student, quote } from "../data/mock";
 import StatCard from "../components/StatCard";
@@ -17,77 +22,63 @@ import RecentActivity from "../components/RecentActivity";
 import AIRobotCard from "../components/AIRobotCard";
 import MobileHeader from "../components/MobileHeader";
 
-// Mountain/landscape hero illustration
+// Premium modern hero illustration
 function HeroIllustration() {
   return (
     <svg
-      width="160"
-      height="90"
-      viewBox="0 0 160 90"
+      width="200"
+      height="120"
+      viewBox="0 0 200 120"
       fill="none"
       aria-hidden="true"
-      className="shrink-0 opacity-70"
+      className="shrink-0"
     >
-      {/* Sky gradient */}
       <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#EEF2FF" />
-          <stop offset="100%" stopColor="#E0F2FE" />
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#E0F2FE" />
+          <stop offset="100%" stopColor="#F0F9FF" />
         </linearGradient>
-        <linearGradient id="mountain1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#818CF8" />
+        <linearGradient id="mount1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#8B5CF6" />
           <stop offset="100%" stopColor="#6366F1" />
         </linearGradient>
-        <linearGradient id="mountain2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#A78BFA" />
-          <stop offset="100%" stopColor="#7C3AED" />
+        <linearGradient id="mount2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#0EA5E9" />
         </linearGradient>
       </defs>
-      <rect width="160" height="90" fill="url(#sky)" rx="8" />
-      {/* Stars */}
-      <circle cx="20" cy="12" r="1" fill="#C7D2FE" opacity="0.8" />
-      <circle cx="80" cy="8" r="1.5" fill="#C7D2FE" opacity="0.6" />
-      <circle cx="130" cy="15" r="1" fill="#C7D2FE" opacity="0.7" />
-      <circle cx="55" cy="20" r="1" fill="#C7D2FE" opacity="0.5" />
-      {/* Far mountain */}
-      <path
-        d="M0 70 L40 30 L80 70 Z"
-        fill="url(#mountain2)"
-        opacity="0.5"
-      />
-      {/* Main mountain */}
-      <path
-        d="M30 90 L90 20 L150 90 Z"
-        fill="url(#mountain1)"
-        opacity="0.8"
-      />
-      {/* Snow cap */}
-      <path d="M90 20 L75 45 L90 40 L105 45 Z" fill="white" opacity="0.6" />
-      {/* Ground */}
-      <rect x="0" y="80" width="160" height="10" rx="2" fill="#6366F1" opacity="0.2" />
-      {/* Trees */}
-      <path d="M8 80 L14 65 L20 80 Z" fill="#22C55E" opacity="0.7" />
-      <path d="M140 80 L148 62 L156 80 Z" fill="#16A34A" opacity="0.6" />
-      <path d="M148 80 L154 68 L160 80 Z" fill="#22C55E" opacity="0.5" />
-    </svg>
-  );
-}
+      
+      {/* Background */}
+      <rect width="200" height="120" rx="16" fill="url(#skyGrad)" opacity="0.4" />
+      
+      {/* Floating Stars */}
+      <path d="M 25 20 l 2 -6 l 2 6 l 6 2 l -6 2 l -2 6 l -2 -6 l -6 -2 Z" fill="#8B5CF6" opacity="0.4" />
+      <path d="M 170 30 l 1.5 -4.5 l 1.5 4.5 l 4.5 1.5 l -4.5 1.5 l -1.5 4.5 l -1.5 -4.5 l -4.5 -1.5 Z" fill="#38BDF8" opacity="0.5" />
+      <circle cx="50" cy="15" r="2" fill="#6366F1" opacity="0.3" />
+      <circle cx="140" cy="25" r="1.5" fill="#0EA5E9" opacity="0.4" />
+      <circle cx="160" cy="10" r="2.5" fill="#8B5CF6" opacity="0.2" />
 
-// Quote card plant
-function QuotePlant() {
-  return (
-    <svg
-      width="36"
-      height="44"
-      viewBox="0 0 36 44"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path d="M18 42 L18 28" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" />
-      <path d="M18 34 Q10 26 9 18 Q17 20 18 34z" fill="#22C55E" opacity="0.8" />
-      <path d="M18 30 Q26 22 27 14 Q19 16 18 30z" fill="#16A34A" opacity="0.7" />
-      <rect x="10" y="36" width="16" height="4" rx="2" fill="#A78BFA" opacity="0.6" />
-      <path d="M8 40 h20 l-2 4 H10 Z" fill="#8B5CF6" opacity="0.4" />
+      {/* Far Mountain */}
+      <path d="M 10 100 L 70 40 L 130 100 Z" fill="url(#mount1)" opacity="0.3" />
+      {/* Main Mountain */}
+      <path d="M 50 110 L 120 30 L 190 110 Z" fill="url(#mount2)" opacity="0.7" />
+      {/* Snow Cap */}
+      <path d="M 120 30 L 105 50 L 120 45 L 135 50 Z" fill="white" opacity="0.8" />
+      
+      {/* Graduation Cap */}
+      <g transform="translate(140, 50) rotate(-15) scale(0.6)">
+        <path d="M 0 15 L 20 5 L 40 15 L 20 25 Z" fill="#6366F1" />
+        <path d="M 10 20 L 10 30 C 10 35 30 35 30 30 L 30 20 Z" fill="#4F46E5" />
+        <path d="M 35 20 L 35 35" stroke="#F59E0B" strokeWidth="2" />
+        <circle cx="35" cy="35" r="2" fill="#F59E0B" />
+      </g>
+      
+      {/* Plant */}
+      <path d="M 35 90 Q 25 80 20 70 Q 35 70 35 90 Z" fill="#22C55E" opacity="0.8" />
+      <path d="M 35 90 Q 45 75 55 65 Q 45 85 35 90 Z" fill="#16A34A" opacity="0.9" />
+      
+      {/* Ground Line */}
+      <rect x="15" y="105" width="170" height="2" rx="1" fill="#0EA5E9" opacity="0.2" />
     </svg>
   );
 }
@@ -105,84 +96,73 @@ export default function HomePage() {
       {/* Mobile sticky header */}
       <MobileHeader />
 
-      <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-7 mobile-content max-w-[1400px] mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 mobile-content max-w-[1400px] mx-auto">
         {/* ─── HERO SECTION ─── */}
         <section
-          className="mb-6 rounded-2xl overflow-hidden"
-          aria-labelledby="hero-heading"
+          className="mb-8 rounded-[2rem] overflow-hidden glass-card flex flex-col xl:flex-row relative shadow-lg shadow-sky-500/5 border border-white/80"
           style={{
-            background:
-              "linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.04) 100%)",
-            border: "1px solid rgba(99,102,241,0.1)",
+            background: "linear-gradient(135deg, rgba(240, 249, 255, 0.7) 0%, rgba(224, 242, 254, 0.5) 100%)",
           }}
+          aria-labelledby="hero-heading"
         >
-          <div className="flex flex-col md:flex-row md:items-start gap-4 p-5 md:p-6">
-            {/* Left: greeting */}
+          <div className="flex-1 flex flex-col md:flex-row items-center justify-between p-6 md:p-8 relative z-10 gap-6">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
-                  <Sparkles className="w-3 h-3" aria-hidden="true" />
+              <div className="flex items-center gap-2 mb-3">
+                <span className="inline-flex items-center gap-1.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-full px-3 py-1 text-xs font-bold text-sky-600 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
                   Progress, not perfection
                 </span>
               </div>
               <h1
                 id="hero-heading"
-                className="text-2xl sm:text-3xl font-bold text-slate-800 leading-snug"
+                className="text-3xl md:text-4xl lg:text-[40px] font-bold text-slate-800 leading-tight tracking-tight"
               >
-                {getGreeting()}, {student.firstName}! 👋
+                {getGreeting()}, Arun! 👋
               </h1>
-              <p className="text-sm text-slate-500 mt-1.5 max-w-md">
+              <p className="text-base text-slate-600 mt-2 max-w-lg font-medium">
                 Here's your learning summary. Keep going — you're closer than
-                you think!
+                you think.
               </p>
             </div>
-
-            {/* Right: illustration (desktop only) */}
-            <div className="hidden md:block shrink-0">
+            <div className="hidden md:block shrink-0 drop-shadow-md">
               <HeroIllustration />
             </div>
           </div>
 
-          {/* Academic alert */}
-          <div
-            className="mx-5 mb-5 rounded-xl p-3.5 flex items-center justify-between gap-3"
-            style={{
-              background: "rgba(248,113,113,0.07)",
-              border: "1px solid rgba(248,113,113,0.18)",
-            }}
-            role="alert"
-            aria-live="polite"
-          >
-            <div className="flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-                <AlertTriangle
-                  className="w-3.5 h-3.5 text-red-500"
-                  aria-hidden="true"
-                />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-red-700">
-                  Academic Attention Needed
-                </p>
-                <p className="text-xs text-red-500/80 mt-0.5">
-                  Your performance has dropped in the last 2 weeks.
-                </p>
+          {/* Academic alert (Right side on desktop, bottom on mobile) */}
+          <div className="xl:w-[340px] xl:border-l border-white/40 p-6 flex flex-col justify-center bg-gradient-to-br from-red-50/50 to-pink-50/50">
+            <div
+              className="rounded-2xl p-4 bg-white/60 backdrop-blur-md border border-red-100 shadow-sm shadow-red-500/5"
+              role="alert"
+              aria-live="polite"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0 border border-red-200">
+                  <AlertTriangle className="w-5 h-5 text-red-500" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-red-700 leading-tight">
+                    Academic Attention Needed
+                  </p>
+                  <p className="text-xs text-red-600/80 mt-1 font-medium leading-snug">
+                    Your performance has dropped in the last 2 weeks.
+                  </p>
+                  <Link
+                    to="/progress"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 transition-colors mt-2"
+                  >
+                    View Details
+                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
               </div>
             </div>
-            <Link
-              to="/progress"
-              className="shrink-0 flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-800 transition whitespace-nowrap"
-              aria-label="View performance details"
-            >
-              View Details
-              <ArrowRight className="w-3 h-3" aria-hidden="true" />
-            </Link>
           </div>
         </section>
 
         {/* ─── STAT CARDS ─── */}
         <section
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8"
           aria-label="Academic statistics"
         >
           <StatCard
@@ -191,9 +171,9 @@ export default function HomePage() {
             trend={student.attendanceTrend}
             trendLabel="this month"
             progress={student.attendancePercent}
-            progressColor="#38bdf8"
-            icon={<UserCheck className="w-5 h-5" aria-hidden="true" />}
-            tintClass="bg-sky-50/30"
+            progressColor="#8B5CF6"
+            icon={<UserCheck className="w-6 h-6" aria-hidden="true" />}
+            tintClass="bg-gradient-to-br from-pink-50/60 to-purple-50/60 border-white/60"
           />
           <StatCard
             label="Quiz Average"
@@ -201,9 +181,9 @@ export default function HomePage() {
             trend={student.quizTrend}
             trendLabel="this month"
             progress={student.quizAverage}
-            progressColor="#6366F1"
-            icon={<ClipboardCheck className="w-5 h-5" aria-hidden="true" />}
-            tintClass="bg-indigo-50/30"
+            progressColor="#F43F5E"
+            icon={<ClipboardCheck className="w-6 h-6" aria-hidden="true" />}
+            tintClass="bg-gradient-to-br from-orange-50/60 to-pink-50/60 border-white/60"
           />
           <StatCard
             label="Assignment Avg"
@@ -211,56 +191,84 @@ export default function HomePage() {
             trend={student.assignmentTrend}
             trendLabel="this month"
             progress={student.assignmentAverage}
-            progressColor="#8B5CF6"
-            icon={<FileText className="w-5 h-5" aria-hidden="true" />}
-            tintClass="bg-violet-50/30"
+            progressColor="#0EA5E9"
+            icon={<FileText className="w-6 h-6" aria-hidden="true" />}
+            tintClass="bg-gradient-to-br from-emerald-50/60 to-sky-50/60 border-white/60"
           />
           <StatCard
             label="Late Submissions"
             value={`${student.lateSubmissions} / ${student.totalAssignments}`}
-            icon={<AlarmClock className="w-5 h-5" aria-hidden="true" />}
-            tintClass="bg-amber-50/30"
+            icon={<AlarmClock className="w-6 h-6" aria-hidden="true" />}
+            tintClass="bg-gradient-to-br from-amber-50/60 to-orange-50/60 border-white/60"
             progressColor="#F59E0B"
             progress={(student.lateSubmissions / student.totalAssignments) * 100}
           />
         </section>
 
+        {/* ─── QUICK ACTIONS ─── */}
+        <section className="mb-8 hidden md:block">
+          <div className="grid grid-cols-4 gap-4">
+            <Link to="/tutor" className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <Bot className="w-5 h-5" />
+              </div>
+              <span className="font-semibold text-sm text-slate-700">Ask AI Tutor</span>
+            </Link>
+            <Link to="/quiz" className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70">
+              <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600">
+                <FileQuestion className="w-5 h-5" />
+              </div>
+              <span className="font-semibold text-sm text-slate-700">Start Quiz</span>
+            </Link>
+            <Link to="/recovery-plan" className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70">
+              <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-violet-600">
+                <PlayCircle className="w-5 h-5" />
+              </div>
+              <span className="font-semibold text-sm text-slate-700">View Recovery Plan</span>
+            </Link>
+            <button className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70 text-left">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <UploadCloud className="w-5 h-5" />
+              </div>
+              <span className="font-semibold text-sm text-slate-700">Upload Notes</span>
+            </button>
+          </div>
+        </section>
+
         {/* ─── MAIN GRID ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Left column — chart + AI robot */}
-          <div className="lg:col-span-2 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Left column */}
+          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
             <PerformanceChart />
 
-            {/* Weak topics + AI robot side by side on medium screens */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <WeakTopics />
               <AIRobotCard />
             </div>
 
-            {/* Recovery plan */}
             <RecoveryPlanCard />
           </div>
 
-          {/* Right column — activity + quote */}
-          <div className="space-y-5">
-            <RecentActivity />
-
-            {/* Quote card */}
-            <div
-              className="glass-card p-5 flex items-center gap-3"
-              role="complementary"
-              aria-label="Motivational quote"
-            >
-              <QuotePlant />
-              <div>
-                <p className="text-sm font-semibold text-slate-700 italic leading-snug">
-                  "{quote.text}"
-                </p>
-                <p className="text-xs text-slate-400 mt-1.5">
-                  — {quote.author}
-                </p>
+          {/* Right column */}
+          <div className="space-y-6 lg:space-y-8">
+            
+            {/* AI Insight Card */}
+            <div className="glass-card p-6 border-sky-100 bg-gradient-to-b from-white/80 to-sky-50/50 shadow-md shadow-sky-500/5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-sky-600" />
+                </div>
+                <h3 className="font-bold text-slate-800">AI Insight</h3>
               </div>
+              <p className="text-sm text-slate-600 leading-relaxed font-medium mb-4">
+                "Your SQL performance improved after practicing joins. Keep the momentum going!"
+              </p>
+              <Link to="/tutor" className="text-sm font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1">
+                Practice Now <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
+
+            <RecentActivity />
           </div>
         </div>
       </div>

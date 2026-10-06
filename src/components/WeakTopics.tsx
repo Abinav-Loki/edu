@@ -1,73 +1,86 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { weakTopics, type Priority } from "../data/mock";
-import GlassCard from "./GlassCard";
 
 const priorityConfig: Record<
   Priority,
-  { label: string; className: string; dot: string }
+  { label: string; className: string; dot: string; progressColor: string }
 > = {
   high: {
     label: "High Priority",
-    className: "badge-pill badge-high",
-    dot: "bg-red-400",
+    className: "badge-pill badge-high bg-red-50 text-red-600 border-red-200",
+    dot: "bg-red-500",
+    progressColor: "#EF4444"
   },
   medium: {
     label: "Medium",
-    className: "badge-pill badge-medium",
-    dot: "bg-amber-400",
+    className: "badge-pill badge-medium bg-amber-50 text-amber-600 border-amber-200",
+    dot: "bg-amber-500",
+    progressColor: "#F59E0B"
   },
   low: {
-    label: "Low",
-    className: "badge-pill badge-low",
-    dot: "bg-emerald-400",
+    label: "Needs Practice",
+    className: "badge-pill badge-low bg-emerald-50 text-emerald-600 border-emerald-200",
+    dot: "bg-emerald-500",
+    progressColor: "#10B981"
   },
 };
 
+// Generating a pseudo-random progress value based on string length to simulate real data
+const getProgress = (str: string) => 40 + (str.length * 3) % 40;
+
 export default function WeakTopics() {
   return (
-    <GlassCard as="section" aria-label="Weak topics requiring attention">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-bold text-slate-800">Weak Topics</h2>
+    <div className="glass-card p-6 border-white/60 bg-white/40" aria-label="Weak topics requiring attention">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">Weak Topics</h2>
+          <p className="text-sm text-slate-500 font-medium">Topics that need more attention</p>
+        </div>
         <Link
           to="/progress"
-          className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition"
+          className="flex items-center gap-1 text-sm font-bold text-sky-600 hover:text-sky-700 transition"
           aria-label="View all weak topics"
         >
           View All
-          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+          <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </Link>
       </div>
 
       <div className="space-y-3">
         {weakTopics.map((topic) => {
           const config = priorityConfig[topic.priority];
+          const progress = getProgress(topic.name);
           return (
             <div
               key={topic.id}
-              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/50 border border-white/70 hover:bg-white/70 transition"
+              className="p-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/80 hover:bg-white/80 transition-all shadow-sm hover:shadow-md hover:-translate-y-[1px]"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <span
-                  className={`w-2 h-2 rounded-full shrink-0 ${config.dot}`}
-                  aria-hidden="true"
-                />
+              <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">
+                  <p className="text-sm font-bold text-slate-800 truncate">
                     {topic.name}
                   </p>
-                  <p className="text-xs text-slate-500 truncate">
-                    {topic.subject}
-                  </p>
                 </div>
+                <span className={config.className} aria-label={`Priority: ${config.label}`}>
+                  {config.label}
+                </span>
               </div>
-              <span className={config.className} aria-label={`Priority: ${config.label}`}>
-                {config.label}
-              </span>
+              
+              {/* Progress Indicator */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: `${progress}%`, backgroundColor: config.progressColor }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-slate-600">{progress}%</span>
+              </div>
             </div>
           );
         })}
       </div>
-    </GlassCard>
+    </div>
   );
 }

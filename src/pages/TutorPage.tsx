@@ -76,7 +76,7 @@ export default function TutorPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  function sendMessage(content: string) {
+  async function sendMessage(content: string) {
     if (!content.trim()) return;
 
     const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -87,36 +87,76 @@ export default function TutorPage() {
       timestamp: now,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
     setIsTyping(true);
 
-    setTimeout(() => {
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Gemini API key is not configured.");
+      }
+
+      // Format history for Gemini API
+      const geminiContents = newMessages.map((msg) => ({
+        role: msg.role === "bot" ? "model" : "user",
+        parts: [{ text: msg.content }]
+      }));
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: "You are the AI-Copilot for CampusOS, an educational platform. Your role is to act as a Socratic tutor. You MUST ONLY answer education-related questions. If the user asks something unrelated to education, academics, or learning, politely decline and steer them back to learning. Keep your answers concise, encouraging, and formatted with markdown when appropriate." }]
+            },
+            contents: geminiContents
+          })
+        }
+      );
+
+      const data = await response.json();
+      let replyText = "I'm having trouble thinking right now. Please try again.";
+      
+      if (data.candidates && data.candidates.length > 0) {
+        replyText = data.candidates[0].content.parts[0].text;
+      } else if (data.error) {
+        replyText = `Error: ${data.error.message}`;
+      }
+
       const botResponse: ChatMessage = {
         id: `msg-${++msgCounter}`,
         role: "bot",
-        content:
-          "That's a thoughtful response! 🎯 You're on the right track. Let's go deeper — can you tell me what would happen if there are rows in the left table that have NO matching rows in the right table? What values would appear in the result?",
+        content: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      setIsTyping(false);
+      
       setMessages((prev) => [...prev, botResponse]);
-    }, 1800);
+    } catch (err: any) {
+      const errorResponse: ChatMessage = {
+        id: `msg-${++msgCounter}`,
+        role: "bot",
+        content: `Connection error: ${err.message}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
+    }
   }
 
   function handleQuickAction(actionId: string) {
-    const response = quickResponses[actionId];
-    if (!response) return;
-
-    const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages((prev) => [
-        ...prev,
-        { id: `msg-${++msgCounter}`, role: "bot", content: response, timestamp: now },
-      ]);
-    }, 1000);
+    let prompt = "";
+    if (actionId === "hint") prompt = "Can you give me a small hint to help me figure out the answer on my own?";
+    if (actionId === "explain") prompt = "Can you explain this concept to me simply?";
+    if (actionId === "example") prompt = "Can you show me a practical example of this?";
+    
+    if (prompt) {
+      sendMessage(prompt);
+    }
   }
 
   return (

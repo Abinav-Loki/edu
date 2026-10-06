@@ -1,22 +1,36 @@
 import { useState } from "react";
 import { CheckCircle2, ArrowRight, ChevronRight } from "lucide-react";
 import { quizQuestions } from "../data/mock";
+import { useLearning } from "../context/LearningContext";
 import MobileHeader from "../components/MobileHeader";
 import GlassCard from "../components/GlassCard";
+import { useNavigate } from "react-router-dom";
 
 export default function QuizPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>("b");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [score, setScore] = useState(0);
+  const { completeQuiz } = useLearning();
+  const navigate = useNavigate();
 
   const question = quizQuestions[currentIndex];
   const totalQuestions = quizQuestions.length;
 
   function handleNext() {
+    const isCorrect = question.options.find(o => o.id === selectedId)?.correct;
+    const newScore = isCorrect ? score + 1 : score;
+    setScore(newScore);
+
     if (currentIndex < totalQuestions - 1) {
       setCurrentIndex((i) => i + 1);
       setSelectedId(null);
       setShowExplanation(false);
+    } else {
+      if (typeof completeQuiz === "function") {
+        completeQuiz(question.topic, newScore, totalQuestions);
+      }
+      navigate('/learning-arena');
     }
   }
 
