@@ -233,7 +233,7 @@ export function LearningProvider({ children }: { children: ReactNode }) {
 
     setProfiles(prev => {
       const p = prev[studentId];
-      if (p.unlockedCosmetics.includes(cosmeticId)) return p;
+      if (p.unlockedCosmetics.includes(cosmeticId)) return prev;
       return {
         ...prev,
         [studentId]: {

@@ -75,7 +75,7 @@ export default function ProgressPage() {
                     strokeWidth={2}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`${value}%`, "Score"]}
+                    formatter={(value: any) => [`${value}%`, "Score"]}
                     contentStyle={{
                       background: "rgba(255,255,255,0.9)",
                       border: "1px solid rgba(99,102,241,0.15)",

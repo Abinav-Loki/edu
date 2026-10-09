@@ -14,13 +14,13 @@
   }
 
   :root {
-    --bg-gradient-from: #F0F9FF;
-    --bg-gradient-via: #F5F3FF;
-    --bg-gradient-to: #E0F2FE;
+    --bg-gradient-from: #E0F2FE;
+    --bg-gradient-via: #F0F9FF;
+    --bg-gradient-to: #BAE6FD;
 
     --primary-from: #38BDF8;
     --primary-via: #0EA5E9;
-    --primary-to: #6366F1;
+    --primary-to: #0284C7;
 
     --sidebar-from: #38BDF8;
     --sidebar-to: #6366F1;
@@ -88,13 +88,72 @@
    ============================================= */
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.65);
   border-radius: var(--radius-card-lg);
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+/* =============================================
+   Frosted Glassmorphism Stat Cards
+   ============================================= */
+.glass-stat-purple {
+  background: linear-gradient(135deg, rgba(243, 232, 255, 0.55) 0%, rgba(238, 242, 255, 0.35) 50%, rgba(255, 255, 255, 0.5) 100%) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border: 1.5px solid rgba(192, 132, 252, 0.5) !important;
+  box-shadow: 0 12px 35px -5px rgba(147, 51, 234, 0.18), inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+.glass-stat-rose {
+  background: linear-gradient(135deg, rgba(255, 241, 242, 0.55) 0%, rgba(255, 237, 213, 0.35) 50%, rgba(255, 255, 255, 0.5) 100%) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border: 1.5px solid rgba(251, 113, 133, 0.5) !important;
+  box-shadow: 0 12px 35px -5px rgba(244, 63, 94, 0.18), inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+.glass-stat-sky {
+  background: linear-gradient(135deg, rgba(240, 249, 255, 0.55) 0%, rgba(224, 231, 255, 0.35) 50%, rgba(255, 255, 255, 0.5) 100%) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
+  box-shadow: 0 12px 35px -5px rgba(14, 165, 233, 0.18), inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+.glass-stat-amber {
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.55) 0%, rgba(255, 237, 213, 0.35) 50%, rgba(255, 255, 255, 0.5) 100%) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border: 1.5px solid rgba(251, 191, 36, 0.5) !important;
+  box-shadow: 0 12px 35px -5px rgba(245, 158, 11, 0.18), inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+.dark .glass-stat-purple {
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.4) 0%, rgba(15, 23, 42, 0.65) 100%) !important;
+  border: 1.5px solid rgba(192, 132, 252, 0.35) !important;
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .glass-stat-rose {
+  background: linear-gradient(135deg, rgba(136, 19, 55, 0.4) 0%, rgba(15, 23, 42, 0.65) 100%) !important;
+  border: 1.5px solid rgba(251, 113, 133, 0.35) !important;
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .glass-stat-sky {
+  background: linear-gradient(135deg, rgba(12, 74, 110, 0.4) 0%, rgba(15, 23, 42, 0.65) 100%) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .glass-stat-amber {
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.4) 0%, rgba(15, 23, 42, 0.65) 100%) !important;
+  border: 1.5px solid rgba(251, 191, 36, 0.35) !important;
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 .glass-card:hover {
