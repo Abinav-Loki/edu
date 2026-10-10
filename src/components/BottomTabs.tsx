@@ -1,10 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { Home, Bot, ClipboardList, TrendingUp, MoreHorizontal } from "lucide-react";
+import { Home, Bot, Calendar, TrendingUp, MoreHorizontal } from "lucide-react";
 
 const tabs = [
   { to: "/dashboard", label: "Home", icon: Home },
   { to: "/tutor", label: "Tutor", icon: Bot },
-  { to: "/recovery-plan", label: "Plan", icon: ClipboardList },
+  { to: "/study-planner", label: "Planner", icon: Calendar },
   { to: "/progress", label: "Progress", icon: TrendingUp },
   { to: "/resources", label: "More", icon: MoreHorizontal },
 ];

@@ -1,21 +1,18 @@
 import { Link } from "react-router-dom";
 import {
-  UserCheck,
-  ClipboardCheck,
-  FileText,
   AlertTriangle,
-  AlarmClock,
   ArrowRight,
   Sparkles,
   PlayCircle,
   FileQuestion,
-  BookOpen as BookOpenIcon,
-  UploadCloud,
-  Bot
+  Target,
+  Users
 } from "lucide-react";
-import { student, quote } from "../data/mock";
-import StatCard from "../components/StatCard";
-import PerformanceChart from "../components/PerformanceChart";
+import { student, performanceData } from "../data/mock";
+import AttendanceRhythmCard from "../components/AttendanceRhythmCard";
+import AssessmentMomentumCard from "../components/AssessmentMomentumCard";
+import AssignmentConsistencyCard from "../components/AssignmentConsistencyCard";
+import LearningHealthCurve from "../components/LearningHealthCurve";
 import WeakTopics from "../components/WeakTopics";
 import RecoveryPlanCard from "../components/RecoveryPlanCard";
 import RecentActivity from "../components/RecentActivity";
@@ -96,12 +93,17 @@ export default function HomePage() {
       {/* Mobile sticky header */}
       <MobileHeader />
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 mobile-content max-w-[1400px] mx-auto">
+      <div className="relative px-4 sm:px-6 lg:px-8 py-6 lg:py-8 mobile-content max-w-[1400px] mx-auto">
+        {/* Soft atmospheric ambient backdrop glows */}
+        <div className="absolute top-12 left-1/4 w-96 h-96 bg-purple-200/25 dark:bg-purple-900/10 rounded-full blur-3xl pointer-events-none -z-10" />
+        <div className="absolute top-96 right-1/4 w-[32rem] h-[32rem] bg-sky-200/30 dark:bg-sky-900/10 rounded-full blur-3xl pointer-events-none -z-10" />
+        <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-indigo-200/20 dark:bg-indigo-900/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
         {/* ─── HERO SECTION ─── */}
         <section
-          className="mb-8 rounded-[2rem] overflow-hidden glass-card flex flex-col xl:flex-row relative shadow-lg shadow-sky-500/5 border border-white/80"
+          className="mb-8 rounded-3xl overflow-hidden glass-card flex flex-col xl:flex-row relative shadow-lg shadow-sky-500/5 border border-white/80 dark:border-slate-800/80"
           style={{
-            background: "linear-gradient(135deg, rgba(240, 249, 255, 0.7) 0%, rgba(224, 242, 254, 0.5) 100%)",
+            background: "linear-gradient(135deg, rgba(240, 249, 255, 0.75) 0%, rgba(224, 242, 254, 0.55) 100%)",
           }}
           aria-labelledby="hero-heading"
         >
@@ -160,78 +162,135 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ─── STAT CARDS ─── */}
+        {/* ─── 3 DISTINCT PERFORMANCE INSIGHT CARDS ─── */}
         <section
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8"
-          aria-label="Academic statistics"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8"
+          aria-label="Academic Analytics Performance Insights"
         >
-          <StatCard
-            label="Attendance"
-            value={`${student.attendancePercent}%`}
+          <AttendanceRhythmCard
+            currentPercent={student.attendancePercent}
             trend={student.attendanceTrend}
-            trendLabel="this month"
-            progress={student.attendancePercent}
-            progressColor="#8B5CF6"
-            icon={<UserCheck className="w-6 h-6" aria-hidden="true" />}
-            tintClass="bg-gradient-to-br from-pink-50/60 to-purple-50/60 border-white/60"
+            targetPercent={75}
+            history={performanceData.map((d) => ({
+              week: d.week,
+              attendance: d.attendance,
+            }))}
           />
-          <StatCard
-            label="Quiz Average"
-            value={`${student.quizAverage}%`}
+
+          <AssessmentMomentumCard
+            currentAverage={student.quizAverage}
             trend={student.quizTrend}
-            trendLabel="this month"
-            progress={student.quizAverage}
-            progressColor="#F43F5E"
-            icon={<ClipboardCheck className="w-6 h-6" aria-hidden="true" />}
-            tintClass="bg-gradient-to-br from-orange-50/60 to-pink-50/60 border-white/60"
+            history={performanceData.map((d) => ({
+              week: d.week,
+              quiz: d.quiz,
+            }))}
+            strongestTopic="SQL Joins"
+            weakestTopic="Normalization"
           />
-          <StatCard
-            label="Assignment Avg"
-            value={`${student.assignmentAverage}%`}
+
+          <AssignmentConsistencyCard
+            averageScore={student.assignmentAverage}
             trend={student.assignmentTrend}
-            trendLabel="this month"
-            progress={student.assignmentAverage}
-            progressColor="#0EA5E9"
-            icon={<FileText className="w-6 h-6" aria-hidden="true" />}
-            tintClass="bg-gradient-to-br from-emerald-50/60 to-sky-50/60 border-white/60"
-          />
-          <StatCard
-            label="Late Submissions"
-            value={`${student.lateSubmissions} / ${student.totalAssignments}`}
-            icon={<AlarmClock className="w-6 h-6" aria-hidden="true" />}
-            tintClass="bg-gradient-to-br from-amber-50/60 to-orange-50/60 border-white/60"
-            progressColor="#F59E0B"
-            progress={(student.lateSubmissions / student.totalAssignments) * 100}
+            totalSubmissions={student.totalAssignments}
+            lateSubmissions={student.lateSubmissions}
+            history={performanceData.map((d) => ({
+              week: d.week,
+              assignment: d.assignment,
+            }))}
           />
         </section>
 
-        {/* ─── QUICK ACTIONS ─── */}
-        <section className="mb-8 hidden md:block">
-          <div className="grid grid-cols-4 gap-4">
-            <Link to="/tutor" className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                <Bot className="w-5 h-5" />
+        {/* ─── LEARNING HEALTH CURVE ─── */}
+        <section className="mb-8" aria-label="Learning Health Curve">
+          <LearningHealthCurve />
+        </section>
+
+        {/* ─── RECOMMENDED NEXT STEPS ─── */}
+        <section className="mb-8" aria-label="Recommended Next Steps">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Recommended Next Steps</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              to="/tutor"
+              className="glass-card p-5 rounded-3xl border border-white/80 dark:border-slate-800/80 hover:border-sky-300 dark:hover:border-sky-700 hover:shadow-xl hover:shadow-sky-500/10 transition-all duration-300 group flex flex-col justify-between bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-2xl bg-sky-100/90 dark:bg-sky-950/80 flex items-center justify-center text-sky-600 dark:text-sky-400 mb-3 group-hover:scale-105 transition-transform border border-sky-200/60 dark:border-sky-800/60 shadow-sm">
+                  <PlayCircle className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                  Practice SQL
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 leading-relaxed">
+                  Improve your weakest topic with AI tutor guidance.
+                </p>
               </div>
-              <span className="font-semibold text-sm text-slate-700">Ask AI Tutor</span>
+              <div className="mt-4 flex items-center text-xs font-bold text-sky-600 dark:text-sky-400">
+                Start Practice <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
             </Link>
-            <Link to="/quiz" className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70">
-              <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600">
-                <FileQuestion className="w-5 h-5" />
+
+            <Link
+              to="/quiz"
+              className="glass-card p-5 rounded-3xl border border-white/80 dark:border-slate-800/80 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 group flex flex-col justify-between bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-2xl bg-indigo-100/90 dark:bg-indigo-950/80 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3 group-hover:scale-105 transition-transform border border-indigo-200/60 dark:border-indigo-800/60 shadow-sm">
+                  <FileQuestion className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  Adaptive Quiz
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 leading-relaxed">
+                  Test your understanding and measure growth.
+                </p>
               </div>
-              <span className="font-semibold text-sm text-slate-700">Start Quiz</span>
+              <div className="mt-4 flex items-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                Take Quiz <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
             </Link>
-            <Link to="/recovery-plan" className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70">
-              <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center text-violet-600">
-                <PlayCircle className="w-5 h-5" />
+
+            <Link
+              to="/recovery-plan"
+              className="glass-card p-5 rounded-3xl border border-white/80 dark:border-slate-800/80 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 group flex flex-col justify-between bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-2xl bg-purple-100/90 dark:bg-purple-950/80 flex items-center justify-center text-purple-600 dark:text-purple-400 mb-3 group-hover:scale-105 transition-transform border border-purple-200/60 dark:border-purple-800/60 shadow-sm">
+                  <Target className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                  Recovery Plan
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 leading-relaxed">
+                  Follow your personalized recovery tasks.
+                </p>
               </div>
-              <span className="font-semibold text-sm text-slate-700">View Recovery Plan</span>
+              <div className="mt-4 flex items-center text-xs font-bold text-purple-600 dark:text-purple-400">
+                View Plan <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
             </Link>
-            <button className="glass-card card-hover p-4 flex items-center gap-3 bg-white/70 text-left">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                <UploadCloud className="w-5 h-5" />
+
+            <Link
+              to="/find-mentor"
+              className="glass-card p-5 rounded-3xl border border-white/80 dark:border-slate-800/80 hover:border-rose-300 dark:hover:border-rose-700 hover:shadow-xl hover:shadow-rose-500/10 transition-all duration-300 group flex flex-col justify-between bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl"
+            >
+              <div>
+                <div className="w-10 h-10 rounded-2xl bg-rose-100/90 dark:bg-rose-950/80 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-3 group-hover:scale-105 transition-transform border border-rose-200/60 dark:border-rose-800/60 shadow-sm">
+                  <Users className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                  Find a Mentor
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1 leading-relaxed">
+                  Get targeted 1-on-1 academic support.
+                </p>
               </div>
-              <span className="font-semibold text-sm text-slate-700">Upload Notes</span>
-            </button>
+              <div className="mt-4 flex items-center text-xs font-bold text-rose-600 dark:text-rose-400">
+                Get Support <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
           </div>
         </section>
 
@@ -239,8 +298,6 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Left column */}
           <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-            <PerformanceChart />
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <WeakTopics />
               <AIRobotCard />
@@ -251,20 +308,41 @@ export default function HomePage() {
 
           {/* Right column */}
           <div className="space-y-6 lg:space-y-8">
-            
-            {/* AI Insight Card */}
-            <div className="glass-card p-6 border-sky-100 bg-gradient-to-b from-white/80 to-sky-50/50 shadow-md shadow-sky-500/5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-sky-600" />
+            {/* AI Insight Card (Enhanced Decision Support Element) */}
+            <div className="glass-card p-6 border border-white/80 dark:border-slate-800/80 bg-gradient-to-b from-white/85 to-sky-50/60 dark:from-slate-900/85 dark:to-sky-950/40 backdrop-blur-xl shadow-lg shadow-sky-500/5 rounded-3xl">
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 flex items-center justify-center border border-sky-200 dark:border-sky-800">
+                    <Sparkles className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                  </div>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+                    AI INSIGHT
+                  </span>
                 </div>
-                <h3 className="font-bold text-slate-800">AI Insight</h3>
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60">
+                  Your strongest signal
+                </span>
               </div>
-              <p className="text-sm text-slate-600 leading-relaxed font-medium mb-4">
-                "Your SQL performance improved after practicing joins. Keep the momentum going!"
-              </p>
-              <Link to="/tutor" className="text-sm font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1">
-                Practice Now <ArrowRight className="w-4 h-4" />
+
+              <blockquote className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug mb-4 border-l-2 border-sky-400 pl-3">
+                "Quiz performance has declined faster than attendance."
+              </blockquote>
+
+              <div className="mb-5 pt-3 border-t border-sky-100 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  Why this matters
+                </span>
+                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-1 leading-relaxed">
+                  Recent assessment performance suggests that some topics may need additional practice.
+                </p>
+              </div>
+
+              <Link
+                to="/tutor"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-md shadow-sky-600/20 transition-all hover:shadow-lg"
+              >
+                <span>Practice Now</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 

@@ -89,7 +89,6 @@ export default function PerformanceChart() {
               dx={-10}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(56, 189, 248, 0.2)', strokeWidth: 2 }} />
-            <Legend hide />
             <Line
               type="monotone"
               dataKey="quiz"

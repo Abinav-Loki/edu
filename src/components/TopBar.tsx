@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Search, Bell, ChevronDown } from "lucide-react";
 import RoleSwitcher from "./RoleSwitcher";
 import { useCampus } from "../context/CampusContext";
@@ -23,6 +23,9 @@ function Avatar({ name }: { name: string }) {
 export default function TopBar() {
   const { currentUser, logout } = useCampus();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const hideSearchBar = ["/find-mentor", "/settings", "/support", "/profile", "/library"].includes(location.pathname);
 
   return (
     <header
@@ -30,22 +33,35 @@ export default function TopBar() {
       role="banner"
     >
       <RoleSwitcher />
-      {/* Search */}
-      <div className="flex-1 max-w-2xl relative group">
-        <Search
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400 group-focus-within:text-sky-500 transition-colors"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          placeholder="Search topics, questions, or upload a file..."
-          className="w-full pl-11 pr-16 py-2.5 rounded-2xl text-sm bg-white/60 backdrop-blur-md border border-white/80 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:bg-white/80 transition-all shadow-sm"
-          aria-label="Search topics, questions, or upload a file"
-        />
-        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-slate-200 text-slate-400 text-[10px] font-semibold bg-white/50 backdrop-blur-sm">
-          ⌘ K
-        </kbd>
-      </div>
+      {/* Search or Campus Status Pill */}
+      {!hideSearchBar ? (
+        <div className="flex-1 max-w-2xl relative group">
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-400 group-focus-within:text-sky-500 transition-colors"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            placeholder="Search topics, questions, or upload a file..."
+            className="w-full pl-11 pr-16 py-2.5 rounded-2xl text-sm bg-white/60 backdrop-blur-md border border-white/80 text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:bg-white/80 transition-all shadow-sm"
+            aria-label="Search topics, questions, or upload a file"
+          />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-slate-200 text-slate-400 text-[10px] font-semibold bg-white/50 backdrop-blur-sm">
+            ⌘ K
+          </kbd>
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="hidden lg:flex items-center gap-2.5 px-4 py-1.5 rounded-2xl bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-white/90 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span>CampusOS Academic Portal</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-extrabold capitalize">
+              {location.pathname.replace('/', '').replace('-', ' ')}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-4 ml-auto">
         {/* Notification bell */}

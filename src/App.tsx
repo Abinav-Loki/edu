@@ -22,10 +22,12 @@ import AssetScanner from "./pages/AssetScanner";
 import SupportPage from "./pages/SupportPage";
 import UploadMaterialsPage from "./pages/UploadMaterialsPage";
 import LibraryPage from "./pages/LibraryPage";
+import StudyPlannerPage from "./pages/StudyPlannerPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import LearningArenaPage from "./pages/LearningArenaPage";
 import { LearningProvider } from "./context/LearningContext";
+import { SidebarProvider } from "./context/SidebarContext";
 import LandingPage from "./pages/landing/LandingPage";
 
 function PublicLanding() {
@@ -44,7 +46,8 @@ export default function App() {
       <SettingsProvider>
         <LearningProvider>
           <BrowserRouter>
-            <Routes>
+            <SidebarProvider>
+              <Routes>
               {/* Public Pre-Auth Route */}
               <Route path="/" element={<PublicLanding />} />
 
@@ -64,6 +67,7 @@ export default function App() {
                 <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["student"]}><HomePage /></ProtectedRoute>} />
                 <Route path="/tutor" element={<ProtectedRoute allowedRoles={["student"]}><TutorPage /></ProtectedRoute>} />
                 <Route path="/learning-arena" element={<ProtectedRoute allowedRoles={["student"]}><LearningArenaPage /></ProtectedRoute>} />
+                <Route path="/study-planner" element={<ProtectedRoute allowedRoles={["student"]}><StudyPlannerPage /></ProtectedRoute>} />
                 <Route path="/recovery-plan" element={<ProtectedRoute allowedRoles={["student"]}><RecoveryPlanPage /></ProtectedRoute>} />
                 <Route path="/quiz" element={<ProtectedRoute allowedRoles={["student"]}><QuizPage /></ProtectedRoute>} />
                 <Route path="/knowledge" element={<ProtectedRoute allowedRoles={["student"]}><KnowledgePage /></ProtectedRoute>} />
@@ -92,6 +96,7 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
+            </SidebarProvider>
           </BrowserRouter>
         </LearningProvider>
       </SettingsProvider>

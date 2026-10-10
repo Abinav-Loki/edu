@@ -82,6 +82,13 @@ export interface MaintenanceTicket {
   createdAt: string;
 }
 
+export interface TicketAttachment {
+  name: string;
+  type: "image" | "file";
+  dataUrl?: string;
+  size?: string;
+}
+
 export interface SupportTicket {
   id: string;
   creatorId: string;
@@ -89,6 +96,7 @@ export interface SupportTicket {
   description: string;
   status: "pending" | "in_progress" | "resolved";
   createdAt: string;
+  attachments?: TicketAttachment[];
 }
 
 export interface Feedback {
@@ -132,12 +140,64 @@ export const initialStudents: Student[] = [
     course: "B.Tech IT",
     year: "3rd Year",
     attendancePercent: 65,
-    quizAverage: 49, // DBMS performance dropping
+    quizAverage: 49,
     assignmentAverage: 72,
     lateSubmissions: 2,
     totalAssignments: 10,
-    weakTopics: ["DBMS", "SQL Joins"],
-  }
+    weakTopics: ["DBMS Normalization", "SQL Joins"],
+  },
+  {
+    id: "s2",
+    name: "Ananya Roy",
+    role: "student",
+    course: "B.Tech CSE",
+    year: "3rd Year",
+    attendancePercent: 95,
+    quizAverage: 92,
+    assignmentAverage: 94,
+    lateSubmissions: 0,
+    totalAssignments: 12,
+    weakTopics: [],
+  },
+  {
+    id: "s3",
+    name: "Rahul Verma",
+    role: "student",
+    course: "B.Tech ECE",
+    year: "2nd Year",
+    attendancePercent: 79,
+    quizAverage: 74,
+    assignmentAverage: 78,
+    lateSubmissions: 1,
+    totalAssignments: 9,
+    weakTopics: ["Fourier Transform"],
+  },
+  {
+    id: "s4",
+    name: "Priya Nair",
+    role: "student",
+    course: "B.Tech IT",
+    year: "3rd Year",
+    attendancePercent: 52,
+    quizAverage: 41,
+    assignmentAverage: 48,
+    lateSubmissions: 4,
+    totalAssignments: 8,
+    weakTopics: ["Web Development", "Data Structures", "DBMS"],
+  },
+  {
+    id: "s5",
+    name: "Vikram Singh",
+    role: "student",
+    course: "B.Tech ME",
+    year: "3rd Year",
+    attendancePercent: 76,
+    quizAverage: 78,
+    assignmentAverage: 81,
+    lateSubmissions: 2,
+    totalAssignments: 9,
+    weakTopics: ["Thermodynamics", "Fluid Mechanics"],
+  },
 ];
 
 export const initialMentors: Mentor[] = [

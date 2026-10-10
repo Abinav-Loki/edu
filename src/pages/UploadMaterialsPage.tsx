@@ -30,8 +30,9 @@ export default function UploadMaterialsPage() {
 
     setUploadStatus("uploading");
     
-    // Simulate upload delay
     setTimeout(() => {
+      if (!currentUser) return;
+
       addMaterial({
         fileName: selectedFile.name,
         fileType: selectedFile.type || "application/octet-stream",
@@ -41,7 +42,7 @@ export default function UploadMaterialsPage() {
         uploadedBy: currentUser.name,
         studentId: currentUser.id
       });
-      
+        
       // Award XP for uploading material
       if (typeof awardXP === "function") {
         awardXP(30, "Knowledge Contributor", "upload_material");

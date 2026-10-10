@@ -214,6 +214,12 @@ export interface ChatMessage {
   role: "bot" | "user";
   content: string;
   timestamp: string;
+  attachedFile?: {
+    name: string;
+    size: string;
+    type: string;
+    url?: string;
+  };
 }
 
 export const initialChatMessages: ChatMessage[] = [
