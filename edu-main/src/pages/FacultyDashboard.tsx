@@ -40,6 +40,7 @@ import {
 } from "../intelligence/analyticsService";
 import StudentDrillDownModal from "../components/analytics/StudentDrillDownModal";
 import InterventionModal from "../components/analytics/InterventionModal";
+import StudentDetailDrawer from "../components/faculty/StudentDetailDrawer";
 import { SCORING_DISCLAIMER } from "../intelligence/scoringConfig";
 
 export default function FacultyDashboard() {
@@ -49,14 +50,21 @@ export default function FacultyDashboard() {
   const [selectedDrillDownStudentId, setSelectedDrillDownStudentId] = useState<string | null>(null);
   const [isDrillDownOpen, setIsDrillDownOpen] = useState<boolean>(false);
 
+  // Student Detail Drawer state
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [drawerStudentId, setDrawerStudentId] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState<'overview' | 'message'>('overview');
+
   // Intervention modal state
   const [isInterventionModalOpen, setIsInterventionModalOpen] = useState<boolean>(false);
   const [interventionStudentId, setInterventionStudentId] = useState<string | null>(null);
 
-  // Search & Filter state for students directory
-  const [searchTerm, setSearchTerm] = useState<string>("");
+  // Search & Filter state for Students Who Need Help
+  const [helpSearchTerm, setHelpSearchTerm] = useState<string>("");
+  const [helpFilter, setHelpFilter] = useState<string>("all");
+
+  // Chart 3 uses this state
   const [selectedSegmentFilter, setSelectedSegmentFilter] = useState<string>("all");
-  const [riskOnlyFilter, setRiskOnlyFilter] = useState<boolean>(false);
 
   // Refresh trigger
   const [refreshKey, setRefreshKey] = useState<number>(0);
@@ -70,27 +78,48 @@ export default function FacultyDashboard() {
     (req) => req.mentorId === currentUser?.id && req.status === "pending"
   );
 
-  // Filtered students for interactive table
-  const filteredStudents = allStudents.filter((student) => {
+  // Identify Students Who Need Help
+  const studentsNeedingHelp = allStudents
+    .map((s) => {
+      const risks = getExplainableRiskFlags(s.id);
+      const breakdown = calculateStudentSuccessScoreBreakdown(s.id);
+      return { student: s, risks, breakdown };
+    })
+    .filter((entry) => entry.risks.length > 0)
+    .sort((a, b) => {
+      const hasHighA = a.risks.some(r => r.severity === "High");
+      const hasHighB = b.risks.some(r => r.severity === "High");
+      if (hasHighA && !hasHighB) return -1;
+      if (!hasHighA && hasHighB) return 1;
+      return b.risks.length - a.risks.length;
+    });
+
+  const filteredHelpStudents = studentsNeedingHelp.filter((entry) => {
+    const { student, risks } = entry;
     const matchesSearch =
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.department?.toLowerCase().includes(searchTerm.toLowerCase());
+      student.name.toLowerCase().includes(helpSearchTerm.toLowerCase()) ||
+      student.id.toLowerCase().includes(helpSearchTerm.toLowerCase()) ||
+      (student.department || student.course)?.toLowerCase().includes(helpSearchTerm.toLowerCase());
 
-    const seg = getStudentSegmentation(student.id);
-    const matchesSegment =
-      selectedSegmentFilter === "all" || seg.primarySegment === selectedSegmentFilter;
+    const matchesFilter =
+      helpFilter === "all" ||
+      (helpFilter === "high_risk" && risks.some(r => r.severity === "High")) ||
+      (helpFilter === "attendance" && risks.some(r => r.category === "Attendance")) ||
+      (helpFilter === "academic" && risks.some(r => r.category === "Academic")) ||
+      (helpFilter === "placement" && risks.some(r => r.category === "Placement Readiness"));
 
-    const risks = getExplainableRiskFlags(student.id);
-    const isAtRisk = risks.some((r) => r.severity === "High" || r.severity === "Medium");
-    const matchesRisk = !riskOnlyFilter || isAtRisk;
-
-    return matchesSearch && matchesSegment && matchesRisk;
+    return matchesSearch && matchesFilter;
   });
 
   const handleOpenDrillDown = (sId: string) => {
     setSelectedDrillDownStudentId(sId);
     setIsDrillDownOpen(true);
+  };
+
+  const handleOpenDrawer = (sId: string, tab: 'overview' | 'message' = 'overview') => {
+    setDrawerStudentId(sId);
+    setDrawerTab(tab);
+    setIsDrawerOpen(true);
   };
 
   const handleLaunchIntervention = (sId: string) => {
@@ -348,15 +377,15 @@ export default function FacultyDashboard() {
           </GlassCard>
         </div>
 
-        {/* 3. SEARCHABLE & FILTERABLE STUDENT ANALYTICS DIRECTORY */}
+        {/* 3. STUDENTS WHO NEED HELP */}
         <div className="glass-card p-6 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">
-                Cohort Student Analytics Directory
+                Students Who Need Help
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Unified data, weighted heuristic scores, risk indicators, and 360° profile drill-down
+                <span className="font-bold text-slate-700 dark:text-slate-200">{studentsNeedingHelp.length} student{studentsNeedingHelp.length === 1 ? '' : 's'} need{studentsNeedingHelp.length === 1 ? 's' : ''} attention.</span> Identify and take action before academic challenges escalate.
               </p>
             </div>
 
@@ -366,183 +395,80 @@ export default function FacultyDashboard() {
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search student or ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search students who need help..."
+                  value={helpSearchTerm}
+                  onChange={(e) => setHelpSearchTerm(e.target.value)}
                   className="pl-8 pr-3 py-1.5 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 w-48"
                 />
               </div>
 
               <select
-                value={selectedSegmentFilter}
-                onChange={(e) => setSelectedSegmentFilter(e.target.value)}
+                value={helpFilter}
+                onChange={(e) => setHelpFilter(e.target.value)}
                 className="py-1.5 px-3 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none"
               >
-                <option value="all">All Segments</option>
-                <option value="Strong Academics / Strong Placement Readiness">Strong Academics & Placement</option>
-                <option value="Strong Academics / Placement Support Needed">Placement Support Needed</option>
-                <option value="Academic Support Needed / Good Engagement">Academic Support Needed</option>
-                <option value="Attendance Concern / Declining Academics">Attendance Concern</option>
-                <option value="Strong Skills / Placement Preparation Incomplete">Skills Strong / Placement Incomplete</option>
-                <option value="Insufficient Data for Segmentation">Insufficient Data</option>
+                <option value="all">All Needs ({studentsNeedingHelp.length})</option>
+                <option value="high_risk">High Risk</option>
+                <option value="attendance">Attendance Concern</option>
+                <option value="academic">Academic Performance</option>
+                <option value="placement">Placement Support</option>
               </select>
-
-              <button
-                onClick={() => setRiskOnlyFilter(!riskOnlyFilter)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                  riskOnlyFilter
-                    ? "bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400"
-                    : "bg-white border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
-                }`}
-              >
-                <AlertTriangle className="w-3.5 h-3.5" />
-                Needs Review Only
-              </button>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-4">Student</th>
-                  <th className="py-3 px-3">Department</th>
-                  <th className="py-3 px-3 text-center">Success Score</th>
-                  <th className="py-3 px-3 text-center">Coverage</th>
-                  <th className="py-3 px-3 text-center">Attendance</th>
-                  <th className="py-3 px-3 text-center">Placement</th>
-                  <th className="py-3 px-4">Risk Flags & Segment</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white/70 dark:bg-slate-900/40">
-                {filteredStudents.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-8 text-slate-400 font-medium">
-                      No students match the selected search and filter criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredStudents.map((s) => {
-                    const breakdown = calculateStudentSuccessScoreBreakdown(s.id);
-                    const risks = getExplainableRiskFlags(s.id);
-                    const seg = getStudentSegmentation(s.id);
-                    const isHighRisk = risks.some((r) => r.severity === "High");
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredHelpStudents.length === 0 ? (
+              <div className="col-span-full text-center py-12 bg-white/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  No students match this filter. 
+                </p>
+              </div>
+            ) : (
+              filteredHelpStudents.map(({ student, risks, breakdown }) => {
+                const primaryRisk = risks[0];
+                return (
+                  <div key={student.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm flex flex-col justify-between space-y-4">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-bold text-slate-800 dark:text-slate-100">{student.name}</h4>
+                          <p className="text-[11px] text-slate-500 font-medium font-mono">{student.course || student.department} · {student.year} · ID: {student.id}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${primaryRisk.severity === 'High' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'}`}>
+                          {primaryRisk.severity} Risk
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-medium mb-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <span className={student.attendancePercent < 75 ? "text-rose-600 font-bold" : ""}>Att: {student.attendancePercent}%</span>
+                        <span className={(breakdown.categoryScores["quizPerformance"]?.score ?? 100) < 60 ? "text-rose-600 font-bold" : ""}>Quiz Avg: {breakdown.categoryScores["quizPerformance"]?.score ?? student.quizAverage ?? 0}%</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">Success: {breakdown.overallScore || "N/A"}%</span>
+                      </div>
 
-                    return (
-                      <tr
-                        key={s.id}
-                        className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition group cursor-pointer"
-                        onClick={() => handleOpenDrillDown(s.id)}
-                      >
-                        {/* Student Name & ID */}
-                        <td className="py-3.5 px-4 font-semibold text-slate-800 dark:text-slate-100">
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold">{s.name}</span>
-                              {isHighRisk && (
-                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="High severity flag" />
-                              )}
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-mono font-medium">
-                              {s.id} • {s.year}
-                            </span>
-                          </div>
-                        </td>
+                      <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <h5 className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">{primaryRisk.title}</h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{primaryRisk.reason}</p>
+                        {primaryRisk.recommendedAction && (
+                          <p className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-1.5 font-medium">↳ {primaryRisk.recommendedAction}</p>
+                        )}
+                      </div>
+                    </div>
 
-                        {/* Department */}
-                        <td className="py-3.5 px-3 text-slate-600 dark:text-slate-400 font-medium">
-                          {s.department || s.course}
-                        </td>
-
-                        {/* Success Score */}
-                        <td className="py-3.5 px-3 text-center">
-                          {breakdown.overallScore !== null ? (
-                            <div className="inline-flex items-center gap-1 font-mono font-black text-sm px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/60">
-                              {breakdown.overallScore}%
-                            </div>
-                          ) : (
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-                              Insufficient Data
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Coverage */}
-                        <td className="py-3.5 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            breakdown.dataCoveragePercent === 100
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border border-amber-200"
-                          }`}>
-                            {breakdown.dataCoveragePercent}% ({breakdown.validCategoriesCount}/6)
-                          </span>
-                        </td>
-
-                        {/* Attendance */}
-                        <td className="py-3.5 px-3 text-center font-mono font-bold">
-                          <span className={s.attendancePercent < 75 ? "text-rose-600" : "text-emerald-600"}>
-                            {s.attendancePercent}%
-                          </span>
-                        </td>
-
-                        {/* Placement Score */}
-                        <td className="py-3.5 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
-                          {breakdown.categoryScores["placementReadiness"]?.score !== null
-                            ? `${breakdown.categoryScores["placementReadiness"].score}%`
-                            : "—"}
-                        </td>
-
-                        {/* Risk Flags & Segment */}
-                        <td className="py-3.5 px-4 space-y-1">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${seg.badgeColor}`}>
-                            {seg.primarySegment}
-                          </span>
-                          {risks.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {risks.slice(0, 2).map((r) => (
-                                <span
-                                  key={r.id}
-                                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                    r.severity === "High"
-                                      ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                                      : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
-                                  }`}
-                                >
-                                  {r.category}: {r.severity}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3.5 px-4 text-right">
-                          <div
-                            className="flex items-center justify-end gap-1.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() => handleOpenDrillDown(s.id)}
-                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 text-xs font-bold transition"
-                            >
-                              Drill-Down 360°
-                            </button>
-                            <button
-                              onClick={() => handleLaunchIntervention(s.id)}
-                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition"
-                            >
-                              + Action
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <button onClick={() => handleOpenDrawer(student.id, 'overview')} className="flex-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition text-center whitespace-nowrap">
+                        View Details
+                      </button>
+                      <button onClick={() => handleOpenDrawer(student.id, 'message')} className="flex-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition text-center whitespace-nowrap">
+                        Send Message
+                      </button>
+                      <button onClick={() => handleLaunchIntervention(student.id)} className="flex-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-md text-center whitespace-nowrap">
+                        Support Action
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
 
@@ -614,6 +540,22 @@ export default function FacultyDashboard() {
         onCreateIntervention={(sId) => {
           setIsDrillDownOpen(false);
           handleLaunchIntervention(sId);
+        }}
+      />
+
+      {/* MODAL 1.5: STUDENT DETAIL DRAWER (View Details & Messaging) */}
+      <StudentDetailDrawer
+        studentId={drawerStudentId}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        defaultTab={drawerTab}
+        onSupport={(sId) => {
+          setIsDrawerOpen(false);
+          handleLaunchIntervention(sId);
+        }}
+        onOpen360={(sId) => {
+          setIsDrawerOpen(false);
+          handleOpenDrillDown(sId);
         }}
       />
 

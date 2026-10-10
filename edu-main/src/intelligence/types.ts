@@ -348,6 +348,8 @@ export interface StudentInterventionItem {
     | "Aptitude Practice"
     | "Coding Practice"
     | "Mock Interview Prep";
+  subject?: string;
+  priority?: "High" | "Medium" | "Low";
   recommendation: string;
   notes: string;
   assignedFaculty: string;
