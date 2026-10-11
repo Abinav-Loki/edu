@@ -38,19 +38,22 @@ import {
   saveMentorRequestToDB,
   saveMaintenanceTicketToDB,
   saveSupportTicketToDB,
+  saveStudentToDB,
   saveMaterialToDB,
   deleteMaterialFromDB,
   saveProfileToDB,
   fetchProfileById,
-  fetchProfileByEmail
+  fetchProfileByEmail,
+  provisionNewUserRecordsInDB
 } from "../services/supabaseService";
 
 interface CampusContextType {
   activeRole: Role;
   setActiveRole: (role: Role) => void;
   currentUser: User | null;
+  isAuthLoading: boolean;
   login: (role: Role, userId?: string, password?: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (role: Role, userData: Partial<User>, password?: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (role: Role, userData: Partial<User> & Record<string, any>, password?: string) => Promise<{ success: boolean; error?: string; pendingApproval?: boolean; message?: string }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   refreshCampusData: () => Promise<void>;
@@ -66,16 +69,21 @@ interface CampusContextType {
   facultySchedules: ScheduleItem[];
   mentorAvailability: AvailabilitySlot[];
 
+  addStudent: (studentData: Omit<Student, "id"> & { id?: string }) => Promise<Student>;
+  updateStudent: (studentId: string, updates: Partial<Student>) => Promise<void>;
+
   addMentorRequest: (req: Omit<MentorRequest, "id" | "status">) => void;
   updateMentorRequest: (id: string, status: MentorRequest["status"], proposedTime?: string, proposedDate?: string) => void;
   
   addMaintenanceTicket: (ticket: Omit<MaintenanceTicket, "id" | "createdAt" | "status">) => void;
   updateMaintenanceTicket: (id: string, status: MaintenanceTicket["status"]) => void;
 
-  addSupportTicket: (ticket: Omit<SupportTicket, "id" | "createdAt" | "status">) => void;
+  addSupportTicket: (ticket: Omit<SupportTicket, "id" | "createdAt" | "status"> & { status?: SupportTicket["status"] }) => void;
+  updateSupportTicket: (id: string, updates: Partial<SupportTicket>) => Promise<void>;
   
   addMaterial: (material: Omit<Material, "id" | "uploadedAt">) => void;
   deleteMaterial: (id: string) => void;
+  addFeedback: (fb: Omit<Feedback, "id" | "createdAt"> & { id?: string; createdAt?: string }) => Promise<Feedback>;
 }
 
 const CampusContext = createContext<CampusContextType | undefined>(undefined);
@@ -98,7 +106,18 @@ export function CampusProvider({ children }: { children: ReactNode }) {
   const [mentorRequests, setMentorRequests] = useState<MentorRequest[]>(initialMentorRequests);
   const [maintenanceTickets, setMaintenanceTickets] = useState<MaintenanceTicket[]>(initialMaintenanceTickets);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(initialSupportTickets);
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>(initialFeedback);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>(() => {
+    try {
+      const stored = localStorage.getItem("eduguard_feedbacks");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Failed to load feedbacks from localStorage:", e);
+    }
+    return initialFeedback;
+  });
   const [materials, setMaterials] = useState<Material[]>(initialMaterials);
   
   const [facultySchedules, setFacultySchedules] = useState<ScheduleItem[]>(initialSchedules);
@@ -107,9 +126,20 @@ export function CampusProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem("eduguard_user");
-      return saved ? JSON.parse(saved) : initialStudents[0];
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      return initialStudents[0];
+      return null;
+    }
+  });
+
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("eduguard_user");
+      const isDemo = localStorage.getItem("eduguard_is_demo") === "true";
+      // If user session already present, no cold-boot loading is needed
+      return !saved && !isDemo;
+    } catch {
+      return true;
     }
   });
 
@@ -127,6 +157,15 @@ export function CampusProvider({ children }: { children: ReactNode }) {
       console.warn("Could not save session to localStorage:", e);
     }
   }, [currentUser, activeRole]);
+
+  // Persist feedbacks to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("eduguard_feedbacks", JSON.stringify(feedbacks));
+    } catch (e) {
+      console.warn("Could not save feedbacks to localStorage:", e);
+    }
+  }, [feedbacks]);
 
   const refreshCampusData = async () => {
     if (!isSupabaseConfigured()) return;
@@ -177,29 +216,51 @@ export function CampusProvider({ children }: { children: ReactNode }) {
 
   // Listen for Supabase Auth state changes (session restoration)
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
+    const isDemoStored = localStorage.getItem("eduguard_is_demo") === "true";
+    const savedUser = localStorage.getItem("eduguard_user");
 
-    // Check existing active session on mount
+    // If demo session or user is already saved, authentication initialization is complete
+    if (isDemoStored || savedUser) {
+      setIsAuthLoading(false);
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      setIsAuthLoading(false);
+      return;
+    }
+
+    // If not a demo session, restore authenticated Supabase session
     authGetSession().then(async (session) => {
       if (session?.user) {
-        const profile = await fetchProfileById(session.user.id);
+        const profile = await fetchProfileById(session.user.id) || 
+          (session.user.email ? await fetchProfileByEmail(session.user.email) : null);
         if (profile) {
-          setCurrentUser(profile);
+          const userWithDemoFlag: User = { ...profile, isDemo: false };
+          setCurrentUser(userWithDemoFlag);
           setActiveRole(profile.role);
         }
       }
-    }).catch(console.error);
+    }).catch(console.error).finally(() => {
+      setIsAuthLoading(false);
+    });
 
     const { data: { subscription } } = onAuthStateChange(async (event: string, session: any) => {
+      const isDemo = localStorage.getItem("eduguard_is_demo") === "true";
+      if (isDemo) return; // Preserve active demo sessions
+
       if (event === "SIGNED_IN" && session?.user) {
         const profile = await fetchProfileById(session.user.id) || 
           (session.user.email ? await fetchProfileByEmail(session.user.email) : null);
         if (profile) {
-          setCurrentUser(profile);
+          const userWithDemoFlag: User = { ...profile, isDemo: false };
+          setCurrentUser(userWithDemoFlag);
           setActiveRole(profile.role);
         }
       } else if (event === "SIGNED_OUT") {
-        setCurrentUser(null);
+        if (!isDemo) {
+          setCurrentUser(null);
+        }
       }
     });
 
@@ -208,124 +269,240 @@ export function CampusProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  async function login(role: Role, userId?: string, _password?: string): Promise<{ success: boolean; error?: string }> {
-    setActiveRole(role);
+  async function login(role: Role, userId?: string, password?: string): Promise<{ success: boolean; error?: string }> {
     const cleanId = userId?.trim() || "";
+    const isDemoId = ["s1", "s2", "f1", "f2", "admin1"].includes(cleanId.toLowerCase());
+    const isDemoFlow = isDemoId || !password;
 
-    // 2. Fallback to existing student/mentor/admin record resolution
-    if (role === "student") {
-      const lower = cleanId.toLowerCase();
-      const found = students.find(
-        (s) =>
-          s.id.toLowerCase() === lower ||
-          s.name.toLowerCase() === lower ||
-          (s as any).email?.toLowerCase() === lower ||
-          (lower.includes("arun") && s.id === "s1") ||
-          (lower.includes("ananya") && s.id === "s2")
-      );
-      if (found) {
-        setCurrentUser(found);
+    // 1. DEDICATED DEMO ACCOUNT ACCESS (PRESERVES WORKING DEMO STATE)
+    if (isDemoFlow) {
+      localStorage.setItem("eduguard_is_demo", "true");
+      setActiveRole(role);
+
+      if (role === "student") {
+        const lower = cleanId.toLowerCase();
+        const found = students.find(
+          (s) =>
+            s.id.toLowerCase() === lower ||
+            s.name.toLowerCase() === lower ||
+            (s as any).email?.toLowerCase() === lower ||
+            (lower.includes("arun") && s.id === "s1") ||
+            (lower.includes("ananya") && s.id === "s2")
+        );
+        const selected = found || students[0];
+        const studentDemo: Student = { ...selected, isDemo: true };
+        setCurrentUser(studentDemo);
         return { success: true };
-      } else if (cleanId) {
-        const formattedName = cleanId.includes("@")
-          ? cleanId.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-          : cleanId;
-        const newStudent: Student = {
-          id: `s_${Date.now()}`,
-          name: formattedName,
-          role: "student",
-          email: cleanId.includes("@") ? cleanId : `${cleanId}@student.edu`,
-          course: "B.Tech IT",
-          year: "3rd Year",
-          attendancePercent: 82,
-          quizAverage: 76,
-          assignmentAverage: 80,
-          lateSubmissions: 0,
-          totalAssignments: 8,
-          weakTopics: []
+      } else if (role === "faculty") {
+        const lower = cleanId.toLowerCase();
+        const found = mentors.find(
+          (m) =>
+            m.id.toLowerCase() === lower ||
+            m.name.toLowerCase() === lower ||
+            (m as any).email?.toLowerCase() === lower ||
+            (lower.includes("rahul") && m.id === "f1") ||
+            (lower.includes("priya") && m.id === "f2")
+        );
+        const selected = found || mentors[0];
+        const mentorDemo: Mentor = { ...selected, isDemo: true };
+        setCurrentUser(mentorDemo);
+        return { success: true };
+      } else {
+        const adminDemo: User = { ...adminUser, isDemo: true };
+        setCurrentUser(adminDemo);
+        return { success: true };
+      }
+    }
+
+    // 2. REAL AUTHENTICATED LOGIN (SUPABASE AUTH)
+    if (!cleanId || !password) {
+      return { success: false, error: "Please provide both email and password." };
+    }
+
+    try {
+      const authData = await authSignIn(cleanId, password);
+      if (!authData?.user) {
+        return { success: false, error: "Authentication failed. No user returned." };
+      }
+
+      localStorage.setItem("eduguard_is_demo", "false");
+
+      // Load profile from Supabase
+      let profile = await fetchProfileById(authData.user.id);
+      if (!profile && authData.user.email) {
+        profile = await fetchProfileByEmail(authData.user.email);
+      }
+
+      // If profile record missing in database, bootstrap it now
+      if (!profile) {
+        const meta = authData.user.user_metadata || {};
+        profile = {
+          id: authData.user.id,
+          name: meta.name || cleanId.split("@")[0],
+          email: authData.user.email || cleanId,
+          role: (meta.role as Role) || role,
+          department: meta.department || "Computer Science",
+          status: meta.status || "active",
+          isDemo: false
         };
-        setStudents((prev) => [newStudent, ...prev]);
-        setCurrentUser(newStudent);
-        if (isSupabaseConfigured()) {
-          saveProfileToDB(newStudent).catch(console.error);
+        saveProfileToDB(profile).catch(console.warn);
+      }
+
+      const verifiedUser: User = { ...profile, isDemo: false };
+      setCurrentUser(verifiedUser);
+      setActiveRole(verifiedUser.role);
+
+      // If student, ensure student academic record is in state
+      if (verifiedUser.role === "student") {
+        const existingStudent = students.find(s => s.id === verifiedUser.id);
+        if (!existingStudent) {
+          const freshStudent: Student = {
+            id: verifiedUser.id,
+            name: verifiedUser.name,
+            email: verifiedUser.email,
+            role: "student",
+            course: (verifiedUser as any).course || "B.Tech Computer Science",
+            year: (verifiedUser as any).year || "1st Year",
+            attendancePercent: 0,
+            quizAverage: 0,
+            assignmentAverage: 0,
+            lateSubmissions: 0,
+            totalAssignments: 0,
+            weakTopics: [],
+            isDemo: false
+          };
+          setStudents(prev => [freshStudent, ...prev]);
         }
-        return { success: true };
-      } else {
-        setCurrentUser(students[0] || null);
-        return { success: true };
       }
-    } else if (role === "faculty") {
-      const lower = cleanId.toLowerCase();
-      const found = mentors.find(
-        (m) =>
-          m.id.toLowerCase() === lower ||
-          m.name.toLowerCase() === lower ||
-          (m as any).email?.toLowerCase() === lower ||
-          (lower.includes("rahul") && m.id === "f1") ||
-          (lower.includes("priya") && m.id === "f2")
-      );
-      if (found) {
-        setCurrentUser(found);
-        return { success: true };
-      } else if (cleanId) {
-        const formattedName = cleanId.includes("@")
-          ? cleanId.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-          : cleanId;
-        const newMentor: Mentor = {
-          id: `f_${Date.now()}`,
-          name: formattedName,
-          role: "faculty",
-          department: "Computer Science",
-          specialization: ["Academics"],
-          availability: ["Monday 3:00 PM"],
-          currentLocation: "Faculty Block"
-        };
-        setMentors((prev) => [newMentor, ...prev]);
-        setCurrentUser(newMentor);
-        if (isSupabaseConfigured()) {
-          saveProfileToDB(newMentor).catch(console.error);
-        }
-        return { success: true };
-      } else {
-        setCurrentUser(mentors[0] || null);
-        return { success: true };
-      }
-    } else {
-      if (cleanId) {
-        const customAdmin = {
-          ...adminUser,
-          name: cleanId.includes("@") ? cleanId.split("@")[0] : cleanId
-        };
-        setAdminUser(customAdmin);
-        setCurrentUser(customAdmin);
-      } else {
-        setCurrentUser(adminUser);
-      }
+
       return { success: true };
+    } catch (err: any) {
+      console.warn("Real login error:", err.message);
+      let userFriendlyMsg = err.message || "Invalid email or password. Please check your credentials or try Demo Login.";
+      if (err.message?.includes("Email not confirmed")) {
+        userFriendlyMsg = "Email address has not been confirmed. To log in immediately without email links, disable 'Confirm email' in Supabase Auth Settings, or use the 1-Click Demo Login.";
+      }
+      return { 
+        success: false, 
+        error: userFriendlyMsg 
+      };
     }
   }
 
-  async function signup(role: Role, userData: Partial<User>, password?: string): Promise<{ success: boolean; error?: string }> {
-    const email = (userData as any).email || (userData.name ? `${userData.name.toLowerCase().replace(/\s+/g, ".")}@campus.edu` : undefined);
-    
+  async function signup(
+    role: Role, 
+    userData: Partial<User> & Record<string, any>, 
+    password?: string
+  ): Promise<{ success: boolean; error?: string; pendingApproval?: boolean; message?: string }> {
+    const email = userData.email?.trim().toLowerCase();
+    const name = userData.name?.trim();
 
-
-    const newId = `new_${Date.now()}`;
-    const newUser = { id: newId, role, ...userData } as any;
-    
-    if (role === "student") {
-      setStudents(prev => [...prev, newUser]);
-    } else if (role === "faculty") {
-      setMentors(prev => [...prev, newUser]);
+    if (!email || !email.includes("@")) {
+      return { success: false, error: "Please enter a valid academic or personal email address." };
     }
-    
-    setActiveRole(role);
-    setCurrentUser(newUser);
-
-    if (isSupabaseConfigured()) {
-      await saveProfileToDB(newUser).catch(console.error);
+    if (!password || password.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters long." };
     }
-    return { success: true };
+    if (!name) {
+      return { success: false, error: "Please provide your full legal name." };
+    }
+
+    // Zero-Trust Role Security Enforcement:
+    // Students can self-register with active status.
+    // Faculty & Administrators require authorized campus tokens or administrator verification.
+    let accountStatus: "active" | "pending_approval" = "active";
+    if (role === "faculty") {
+      const isVerifiedToken = userData.authToken === "CAMPUS_VERIFIED_STAFF_2026";
+      accountStatus = isVerifiedToken ? "active" : "pending_approval";
+    } else if (role === "admin") {
+      const isVerifiedAdmin = userData.authToken === "CAMPUS_ADMIN_SUPERUSER_2026";
+      accountStatus = isVerifiedAdmin ? "active" : "pending_approval";
+    }
+
+    try {
+      const signUpRes = await authSignUp(email, password, {
+        name,
+        role,
+        department: userData.department || "Computer Science",
+        course: userData.course || "B.Tech Computer Science",
+        year: userData.year || "1st Year",
+        registration_number: userData.registrationNumber,
+        designation: userData.designation,
+        institution: userData.institution || "Campus Institute of Technology",
+        status: accountStatus
+      });
+
+      const newUserId = signUpRes.user?.id || `usr_${Date.now()}`;
+
+      // Provision profile & role records in Supabase
+      await provisionNewUserRecordsInDB({
+        id: newUserId,
+        email,
+        name,
+        role,
+        department: userData.department || "Computer Science",
+        course: userData.course || "B.Tech Computer Science",
+        year: userData.year || "1st Year",
+        registrationNumber: userData.registrationNumber,
+        designation: userData.designation,
+        institution: userData.institution || "Campus Institute of Technology",
+        status: accountStatus
+      });
+
+      // Role Security Response Handling
+      if (accountStatus === "pending_approval") {
+        return {
+          success: true,
+          pendingApproval: true,
+          message: `Your registration for the ${role === "faculty" ? "Faculty" : "Administrator"} Portal has been received. To ensure campus security, your credentials are under review by Campus Administration. You will be able to log in once verified.`
+        };
+      }
+
+      // Active student login
+      localStorage.setItem("eduguard_is_demo", "false");
+      const freshUser: User = {
+        id: newUserId,
+        name,
+        email,
+        role,
+        department: userData.department || "Computer Science",
+        status: "active",
+        isDemo: false
+      };
+
+      if (role === "student") {
+        const freshStudent: Student = {
+          ...freshUser,
+          role: "student",
+          course: userData.course || "B.Tech Computer Science",
+          year: userData.year || "1st Year",
+          attendancePercent: 0,
+          quizAverage: 0,
+          assignmentAverage: 0,
+          lateSubmissions: 0,
+          totalAssignments: 0,
+          weakTopics: [],
+          isDemo: false
+        };
+        setStudents(prev => [freshStudent, ...prev]);
+        setCurrentUser(freshStudent);
+      } else {
+        setCurrentUser(freshUser);
+      }
+
+      setActiveRole(role);
+      return { success: true };
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      let userFriendlyMsg = err.message || "Failed to register account. Please check your network connection and retry.";
+      if (err.message?.includes("rate limit")) {
+        userFriendlyMsg = "Email rate limit reached on free-tier Supabase provider. In production, configure custom SMTP or disable 'Confirm email' in Supabase Auth Settings. For immediate evaluation, explore with the 1-Click Demo accounts.";
+      }
+      return { 
+        success: false, 
+        error: userFriendlyMsg
+      };
+    }
   }
 
   async function logout(): Promise<void> {
@@ -335,6 +512,8 @@ export function CampusProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
     try {
       localStorage.removeItem("eduguard_user");
+      localStorage.removeItem("eduguard_role");
+      localStorage.removeItem("eduguard_is_demo");
       localStorage.removeItem("edu_arena_progress_master");
     } catch {
       // ignore
@@ -435,12 +614,61 @@ export function CampusProvider({ children }: { children: ReactNode }) {
     }));
   }
 
-  function addSupportTicket(ticket: Omit<SupportTicket, "id" | "createdAt" | "status">) {
+  async function addStudent(studentData: Omit<Student, "id"> & { id?: string }): Promise<Student> {
+    const studentId = studentData.id || `s_${Date.now()}`;
+    const newStudent: Student = {
+      ...studentData,
+      id: studentId,
+      role: "student",
+      attendancePercent: studentData.attendancePercent ?? 0,
+      quizAverage: studentData.quizAverage ?? 0,
+      assignmentAverage: studentData.assignmentAverage ?? 0,
+      lateSubmissions: studentData.lateSubmissions ?? 0,
+      totalAssignments: studentData.totalAssignments ?? 0,
+      weakTopics: studentData.weakTopics || [],
+    };
+
+    setStudents((prev) => [newStudent, ...prev]);
+
+    if (isSupabaseConfigured()) {
+      try {
+        await saveProfileToDB(newStudent);
+        await saveStudentToDB(newStudent);
+      } catch (err) {
+        console.error("addStudent Supabase error:", err);
+      }
+    }
+    return newStudent;
+  }
+
+  async function updateStudent(studentId: string, updates: Partial<Student>): Promise<void> {
+    setStudents((prev) => prev.map((s) => (s.id === studentId ? { ...s, ...updates } : s)));
+
+    if (currentUser && currentUser.id === studentId) {
+      setCurrentUser((prev) => (prev ? ({ ...prev, ...updates } as User) : null));
+    }
+
+    if (isSupabaseConfigured()) {
+      try {
+        await saveStudentToDB({ id: studentId, ...updates });
+        if (updates.name || updates.email) {
+          const matched = students.find((s) => s.id === studentId);
+          if (matched) {
+            await saveProfileToDB({ ...matched, ...updates });
+          }
+        }
+      } catch (err) {
+        console.error("updateStudent Supabase error:", err);
+      }
+    }
+  }
+
+  function addSupportTicket(ticket: Omit<SupportTicket, "id" | "createdAt" | "status"> & { status?: SupportTicket["status"] }) {
     const newTicket: SupportTicket = {
       ...ticket,
       id: `ST-${Math.floor(1000 + Math.random() * 9000)}`,
       createdAt: new Date().toISOString(),
-      status: "pending"
+      status: ticket.status || "submitted"
     };
     setSupportTickets((prev) => [newTicket, ...prev]);
 
@@ -449,11 +677,64 @@ export function CampusProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function updateSupportTicket(id: string, updates: Partial<SupportTicket>): Promise<void> {
+    let targetTicket: SupportTicket | undefined;
+    setSupportTickets((prev) =>
+      prev.map((ticket) => {
+        if (ticket.id === id) {
+          const updated = { ...ticket, ...updates, updatedAt: new Date().toISOString() };
+          targetTicket = updated;
+          return updated;
+        }
+        return ticket;
+      })
+    );
+
+    if (targetTicket && isSupabaseConfigured()) {
+      try {
+        await saveSupportTicketToDB(targetTicket);
+      } catch (err) {
+        console.error("updateSupportTicket Supabase error:", err);
+      }
+    }
+  }
+
+  const addFeedback = async (fb: Omit<Feedback, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<Feedback> => {
+    const newFb: Feedback = {
+      ...fb,
+      id: fb.id || `fb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: fb.createdAt || new Date().toISOString()
+    };
+    
+    setFeedbacks(prev => [newFb, ...prev]);
+
+    // Recalculate mentor rating and reviewsCount in real time if rating provided
+    if (newFb.facultyId && typeof newFb.rating === "number") {
+      setMentors(prev => prev.map(m => {
+        if (m.id === newFb.facultyId) {
+          const currentCount = m.reviewsCount || 0;
+          const currentRating = m.rating || 4.8;
+          const newCount = currentCount + 1;
+          const newRating = Number(((currentRating * currentCount + newFb.rating!) / newCount).toFixed(1));
+          return {
+            ...m,
+            reviewsCount: newCount,
+            rating: newRating
+          };
+        }
+        return m;
+      }));
+    }
+
+    return newFb;
+  };
+
   return (
     <CampusContext.Provider value={{
       activeRole,
       setActiveRole,
       currentUser,
+      isAuthLoading,
       login,
       signup,
       logout,
@@ -469,13 +750,17 @@ export function CampusProvider({ children }: { children: ReactNode }) {
       materials,
       facultySchedules,
       mentorAvailability,
+      addStudent,
+      updateStudent,
       addMentorRequest,
       updateMentorRequest,
       addMaintenanceTicket,
       updateMaintenanceTicket,
       addSupportTicket,
+      updateSupportTicket,
       addMaterial,
-      deleteMaterial
+      deleteMaterial,
+      addFeedback
     }}>
       {children}
     </CampusContext.Provider>

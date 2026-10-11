@@ -97,40 +97,53 @@ export default function HomePage() {
   const currentStudent = (currentUser?.role === "student" ? (currentUser as any) : null) || students.find(s => s.id === currentUser?.id) || students[0];
   const displayName = currentUser?.name?.split(" ")[0] || currentUser?.name || "Student";
 
-  const studentPerf = currentStudent ? [
-    {
-      week: "Week 1",
-      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.05)),
-      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 1.02)),
-      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.03))
-    },
-    {
-      week: "Week 2",
-      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.02)),
-      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.98)),
-      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.01))
-    },
-    {
-      week: "Week 3",
-      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 0.95)),
-      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.96)),
-      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 0.98))
-    },
-    {
-      week: "Week 4",
-      quiz: currentStudent.quizAverage || 75,
-      assignment: currentStudent.assignmentAverage || 80,
-      attendance: currentStudent.attendancePercent || 82
-    }
-  ] : performanceData;
+  const isOnboarding = Boolean(
+    currentStudent && 
+    currentStudent.isDemo !== true && 
+    (!currentStudent.attendancePercent || currentStudent.journeyType === "onboarding" || currentStudent.totalAssignments === 0)
+  );
 
-  const attendanceTrend = (currentStudent?.attendancePercent || 80) >= 75 ? "up" : "down";
-  const quizTrend = (currentStudent?.quizAverage || 75) >= 70 ? "up" : "down";
-  const assignmentTrend = (currentStudent?.assignmentAverage || 80) >= 70 ? "up" : "down";
-  const weakestTopic = currentStudent?.weakTopics?.[0] || "Normalization";
+  const studentPerf = isOnboarding 
+    ? [
+        { week: "Week 1", quiz: 0, assignment: 0, attendance: 0 },
+        { week: "Week 2", quiz: 0, assignment: 0, attendance: 0 },
+        { week: "Week 3", quiz: 0, assignment: 0, attendance: 0 },
+        { week: "Week 4", quiz: 0, assignment: 0, attendance: 0 }
+      ]
+    : (currentStudent ? [
+        {
+          week: "Week 1",
+          quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.05)),
+          assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 1.02)),
+          attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.03))
+        },
+        {
+          week: "Week 2",
+          quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.02)),
+          assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.98)),
+          attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.01))
+        },
+        {
+          week: "Week 3",
+          quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 0.95)),
+          assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.96)),
+          attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 0.98))
+        },
+        {
+          week: "Week 4",
+          quiz: currentStudent.quizAverage || 75,
+          assignment: currentStudent.assignmentAverage || 80,
+          attendance: currentStudent.attendancePercent || 82
+        }
+      ] : performanceData);
+
+  const attendanceTrend = isOnboarding ? "neutral" : ((currentStudent?.attendancePercent || 80) >= 75 ? "up" : "down");
+  const quizTrend = isOnboarding ? "neutral" : ((currentStudent?.quizAverage || 75) >= 70 ? "up" : "down");
+  const assignmentTrend = isOnboarding ? "neutral" : ((currentStudent?.assignmentAverage || 80) >= 70 ? "up" : "down");
+  const weakestTopic = isOnboarding ? "Awaiting Assessment Data" : (currentStudent?.weakTopics?.[0] || "Normalization");
   const studentId = currentStudent?.id || "s1";
   const studentBreakdown = calculateStudentSuccessScoreBreakdown(studentId);
-  const studentRisks = getExplainableRiskFlags(studentId);
+  const studentRisks = isOnboarding ? [] : getExplainableRiskFlags(studentId);
   const hasAcademicRisk = studentRisks.some((r) => r.category === "Academic" || r.category === "Attendance");
 
   return (
@@ -146,29 +159,32 @@ export default function HomePage() {
 
         {/* ─── HERO SECTION ─── */}
         <section
-          className="mb-8 rounded-3xl overflow-hidden glass-card flex flex-col xl:flex-row relative shadow-lg shadow-sky-500/5 border border-white/80 dark:border-slate-800/80"
-          style={{
-            background: "linear-gradient(135deg, rgba(240, 249, 255, 0.75) 0%, rgba(224, 242, 254, 0.55) 100%)",
-          }}
+          className="mb-8 rounded-3xl overflow-hidden glass-card flex flex-col xl:flex-row relative shadow-lg shadow-sky-500/5 border border-white/80 dark:border-slate-800/80 bg-gradient-to-br from-sky-50/80 via-white/60 to-indigo-50/80 dark:from-slate-900/90 dark:via-slate-800/80 dark:to-indigo-950/70"
           aria-labelledby="hero-heading"
         >
           <div className="flex-1 flex flex-col md:flex-row items-center justify-between p-6 md:p-8 relative z-10 gap-6">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-3">
-                <span className="inline-flex items-center gap-1.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-full px-3 py-1 text-xs font-bold text-sky-600 shadow-sm">
+                <span className="inline-flex items-center gap-1.5 bg-white/60 dark:bg-slate-800/80 backdrop-blur-md border border-white/80 dark:border-slate-700 rounded-full px-3 py-1 text-xs font-bold text-sky-600 dark:text-sky-400 shadow-sm">
                   <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-                  Progress, not perfection
+                  {isOnboarding ? "New Academic Profile Active" : "Progress, not perfection"}
                 </span>
+                {isOnboarding && (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                    Fresh Student Space
+                  </span>
+                )}
               </div>
               <h1
                 id="hero-heading"
-                className="text-3xl md:text-4xl lg:text-[40px] font-bold text-slate-800 leading-tight tracking-tight"
+                className="text-3xl md:text-4xl lg:text-[40px] font-bold text-slate-800 dark:text-white leading-tight tracking-tight"
               >
                 {getGreeting()}, {displayName}! 👋
               </h1>
-              <p className="text-base text-slate-600 mt-2 max-w-lg font-medium">
-                Here's your learning summary. Keep going — you're closer than
-                you think.
+              <p className="text-base text-slate-600 dark:text-slate-300 mt-2 max-w-lg font-medium">
+                {isOnboarding 
+                  ? "Welcome to your personal learning dashboard. Start your first topic mission or upload study materials to build your academic journey." 
+                  : "Here's your learning summary. Keep going — you're closer than you think."}
               </p>
             </div>
             <div className="hidden md:block shrink-0 drop-shadow-md">
@@ -177,8 +193,33 @@ export default function HomePage() {
           </div>
 
           {/* Academic alert / Success Status (Right side on desktop, bottom on mobile) */}
-          <div className="xl:w-[340px] xl:border-l border-white/40 p-6 flex flex-col justify-center bg-gradient-to-br from-indigo-50/30 to-sky-50/30">
-            {hasAcademicRisk ? (
+          <div className="xl:w-[340px] xl:border-l border-white/40 dark:border-slate-800 p-6 flex flex-col justify-center bg-gradient-to-br from-indigo-50/30 to-sky-50/30 dark:from-slate-900/50 dark:to-indigo-950/50">
+            {isOnboarding ? (
+              <div
+                className="rounded-2xl p-4 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md border border-indigo-100 dark:border-indigo-900/50 shadow-sm"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
+                    <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300 leading-tight">
+                      Onboarding • Ready to Begin
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium leading-snug">
+                      Academic analytics will calculate automatically as your department logs semester attendance and marks.
+                    </p>
+                    <Link
+                      to="/learning-arena"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors mt-2"
+                    >
+                      Start in Learning Arena
+                      <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ) : hasAcademicRisk ? (
               <div
                 className="rounded-2xl p-4 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md border border-rose-100 dark:border-rose-900/50 shadow-sm"
                 role="alert"
@@ -245,7 +286,7 @@ export default function HomePage() {
           aria-label="Academic Analytics Performance Insights"
         >
           <AttendanceRhythmCard
-            currentPercent={currentStudent?.attendancePercent ?? 82}
+            currentPercent={isOnboarding ? 0 : (currentStudent?.attendancePercent ?? 82)}
             trend={attendanceTrend as any}
             targetPercent={75}
             history={studentPerf.map((d) => ({
@@ -255,21 +296,21 @@ export default function HomePage() {
           />
 
           <AssessmentMomentumCard
-            currentAverage={currentStudent?.quizAverage ?? 76}
+            currentAverage={isOnboarding ? 0 : (currentStudent?.quizAverage ?? 76)}
             trend={quizTrend as any}
             history={studentPerf.map((d) => ({
               week: d.week,
               quiz: d.quiz,
             }))}
-            strongestTopic="SQL Joins"
+            strongestTopic={isOnboarding ? "Learning Arena" : "SQL Joins"}
             weakestTopic={weakestTopic}
           />
 
           <AssignmentConsistencyCard
-            averageScore={currentStudent?.assignmentAverage ?? 80}
+            averageScore={isOnboarding ? 0 : (currentStudent?.assignmentAverage ?? 80)}
             trend={assignmentTrend as any}
-            totalSubmissions={currentStudent?.totalAssignments ?? 8}
-            lateSubmissions={currentStudent?.lateSubmissions ?? 0}
+            totalSubmissions={isOnboarding ? 0 : (currentStudent?.totalAssignments ?? 8)}
+            lateSubmissions={isOnboarding ? 0 : (currentStudent?.lateSubmissions ?? 0)}
             history={studentPerf.map((d) => ({
               week: d.week,
               assignment: d.assignment,

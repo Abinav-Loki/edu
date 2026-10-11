@@ -77,7 +77,7 @@ export default function MascotCharacter({
     focused: "Emerging challenge detected! 🎯",
     recommending: "Here's a targeted Recovery Plan! 📋",
     celebrating: "Every step forward matters! 🎉",
-    idle: "I'm your CampusOS AI companion! ✨"
+    idle: "I'm your ARIVON AI companion! ✨"
   }[currentPose];
 
   // Derive pose-specific SVG transforms & expressions

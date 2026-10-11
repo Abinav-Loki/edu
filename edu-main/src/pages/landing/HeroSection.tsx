@@ -40,16 +40,16 @@ export default function HeroSection() {
 
             {/* Core Product Positioning Paragraph */}
             <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-2xl">
-              CampusOS turns scattered student activity, academic performance, engagement and support data into actionable intelligence — helping institutions identify challenges early, understand why they happen, and deliver the right intervention at the right time.
+              ARIVON AI turns scattered student activity, academic performance, engagement and grievance data into actionable intelligence — helping institutions identify challenges early, understand why they happen, and deliver the right intervention at the right time.
             </p>
 
             {/* Primary & Secondary Action CTAs */}
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <Link
-                to="/dashboard"
+                to="/login"
                 className="px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-base shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/35 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 group cursor-pointer"
               >
-                <span>Explore CampusOS</span>
+                <span>Explore ARIVON AI</span>
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
 

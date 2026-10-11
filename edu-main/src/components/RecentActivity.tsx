@@ -68,32 +68,32 @@ export default function RecentActivity() {
     : defaultActivity;
 
   return (
-    <div className="glass-card p-6 border-white/60 bg-white/40" aria-label="Recent activity">
-      <h2 className="text-lg font-bold text-slate-800 mb-6">
+    <div className="glass-card p-6 border-white/60 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/60" aria-label="Recent activity">
+      <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6">
         Recent Activity
       </h2>
 
       <div className="relative">
         {/* Timeline Line */}
-        <div className="absolute left-[15px] top-4 bottom-4 w-px bg-slate-200/60" aria-hidden="true" />
+        <div className="absolute left-[15px] top-4 bottom-4 w-px bg-slate-200/60 dark:bg-slate-700/60" aria-hidden="true" />
         
         <div className="space-y-6 relative">
           {activities.map((item) => {
             const config = activityConfig[item.type];
-            const detailColor = detailColorMap[item.detail] ?? "text-slate-500";
+            const detailColor = detailColorMap[item.detail] ?? "text-slate-500 dark:text-slate-400";
 
             return (
               <div key={item.id} className="flex gap-4 group">
                 <div className="relative z-10 flex flex-col items-center">
                   <div
-                    className={`w-8 h-8 rounded-full ${config.bg} ${config.color} ${config.border} border-2 flex items-center justify-center shrink-0 shadow-sm shadow-black/5 group-hover:scale-110 transition-transform`}
+                    className={`w-8 h-8 rounded-full ${config.bg} dark:bg-slate-800 ${config.color} ${config.border} dark:border-slate-700 border-2 flex items-center justify-center shrink-0 shadow-sm shadow-black/5 group-hover:scale-110 transition-transform`}
                     aria-hidden="true"
                   >
                     {config.icon}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0 pt-1">
-                  <p className="text-sm font-semibold text-slate-700 leading-snug">
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-snug">
                     {item.title}
                   </p>
                   <div className="flex items-center gap-2 mt-1">

@@ -43,15 +43,15 @@ export default function WeakTopics() {
     : defaultWeakTopics;
 
   return (
-    <div className="glass-card p-6 border-white/60 bg-white/40" aria-label="Weak topics requiring attention">
+    <div className="glass-card p-6 border-white/60 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/60" aria-label="Weak topics requiring attention">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-lg font-bold text-slate-800">Weak Topics</h2>
-          <p className="text-sm text-slate-500 font-medium">Topics that need more attention</p>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Weak Topics</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Topics that need more attention</p>
         </div>
         <Link
           to="/progress"
-          className="flex items-center gap-1 text-sm font-bold text-sky-600 hover:text-sky-700 transition"
+          className="flex items-center gap-1 text-sm font-bold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
           aria-label="View all weak topics"
         >
           View All
@@ -66,11 +66,11 @@ export default function WeakTopics() {
           return (
             <div
               key={topic.id}
-              className="p-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/80 hover:bg-white/80 transition-all shadow-sm hover:shadow-md hover:-translate-y-[1px]"
+              className="p-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-white/80 dark:border-slate-700/60 hover:bg-white/80 dark:hover:bg-slate-800/90 transition-all shadow-sm hover:shadow-md hover:-translate-y-[1px]"
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-800 truncate">
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                     {topic.name}
                   </p>
                 </div>
@@ -81,13 +81,13 @@ export default function WeakTopics() {
               
               {/* Progress Indicator */}
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
                   <div 
                     className="h-full rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${progress}%`, backgroundColor: config.progressColor }}
                   />
                 </div>
-                <span className="text-xs font-bold text-slate-600">{progress}%</span>
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{progress}%</span>
               </div>
             </div>
           );

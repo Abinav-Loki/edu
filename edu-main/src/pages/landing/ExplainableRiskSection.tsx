@@ -15,7 +15,7 @@ export default function ExplainableRiskSection() {
             Don’t just predict risk. Understand it.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            A single percentage risk score alone is not enough to guide faculty or student intervention. CampusOS breaks down the contributing drivers and provides clear reasoning behind every alert.
+            A single percentage risk score alone is not enough to guide faculty or student intervention. ARIVON AI breaks down the contributing drivers and provides clear reasoning behind every alert.
           </p>
         </div>
 
@@ -144,7 +144,7 @@ export default function ExplainableRiskSection() {
           </div>
 
           <div className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 text-center border-t border-slate-200 dark:border-slate-700">
-            Illustrative demonstration showing how CampusOS turns raw risk metrics into transparent, actionable interventions.
+            Illustrative demonstration showing how ARIVON AI turns raw risk metrics into transparent, actionable interventions.
           </div>
         </div>
 

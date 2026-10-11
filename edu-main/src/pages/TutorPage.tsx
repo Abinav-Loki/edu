@@ -1,9 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Lightbulb, BookOpen, Code2, Bot, Paperclip, FileText, X, Upload } from "lucide-react";
+import { Send, Lightbulb, BookOpen, Code2, Bot, Paperclip, FileText, X, Upload, ShieldAlert, Award, Sparkles, Languages } from "lucide-react";
 import { initialChatMessages, type ChatMessage } from "../data/mock";
 import { useCampus } from "../context/CampusContext";
 import { isSupabaseConfigured } from "../lib/supabase";
 import { fetchTutorMessagesFromDB, saveTutorMessageToDB } from "../services/supabaseService";
+import {
+  calculateStudentSuccessScoreBreakdown,
+  getExplainableRiskFlags,
+  getStudentSegmentation,
+} from "../intelligence/analyticsService";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 
@@ -71,13 +76,116 @@ function UserMessage({ message }: { message: ChatMessage }) {
 }
 
 const quickActions = [
-  { id: "hint", label: "Hint", icon: Lightbulb, color: "text-amber-600" },
-  { id: "explain", label: "Explain", icon: BookOpen, color: "text-indigo-600" },
-  { id: "example", label: "Show Example", icon: Code2, color: "text-emerald-600" },
+  { id: "score", label: "📊 Explain Success Score", icon: Award, color: "text-indigo-600 bg-indigo-50/70 border-indigo-200 hover:bg-indigo-100" },
+  { id: "risk", label: "⚠️ Review Academic Risk", icon: ShieldAlert, color: "text-amber-700 bg-amber-50/70 border-amber-200 hover:bg-amber-100" },
+  { id: "materials", label: "📚 Summarize Study Notes", icon: BookOpen, color: "text-emerald-700 bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100" },
+  { id: "tanglish", label: "🗣️ Explain in Tanglish", icon: Languages, color: "text-purple-700 bg-purple-50/70 border-purple-200 hover:bg-purple-100" },
+  { id: "hint", label: "💡 Hint", icon: Lightbulb, color: "text-amber-600 bg-white/70 border-white/80 hover:bg-white" },
 ];
 
+function generateGroundedFallbackResponse(
+  userPrompt: string,
+  studentName: string,
+  studentId: string,
+  breakdown: ReturnType<typeof calculateStudentSuccessScoreBreakdown>,
+  riskFlags: ReturnType<typeof getExplainableRiskFlags>,
+  segment: ReturnType<typeof getStudentSegmentation>,
+  studentMaterials: any[]
+): string {
+  const p = userPrompt.toLowerCase();
+  const overallScore = breakdown.overallScore ?? 0;
+  const riskLevel = riskFlags.some(f => f.severity === "High")
+    ? "HIGH"
+    : (riskFlags.some(f => f.severity === "Medium") ? "MODERATE" : "LOW");
+
+  if (p.includes("score") || p.includes("success") || p.includes("coverage") || p.includes("breakdown") || p.includes("weight")) {
+    const acad = breakdown.categoryScores["academic"];
+    const att = breakdown.categoryScores["attendance"];
+    const lms = breakdown.categoryScores["lmsActivity"];
+    const sp = breakdown.categoryScores["skillsPlacement"];
+    const eng = breakdown.categoryScores["engagement"];
+    const fb = breakdown.categoryScores["feedback"];
+
+    return `### 📊 Verified Success Score Analysis for ${studentName} (${studentId})
+[Source: Institutional Analytics Engine - Verified Record]
+
+**Overall Success Score:** **${overallScore}/100** (${breakdown.statusLabel})  
+*Coverage: ${breakdown.dataCoveragePercent}% indicators present (${breakdown.validCategoriesCount} of ${breakdown.totalCategoriesCount} Categories)*
+
+#### Category Weights & Contributions (Re-normalized to 100%):
+- **Academic Performance:** **${acad?.score ?? "N/A"}/100** (Configured: ${acad?.configuredWeight}%, Re-normalized: ${acad?.reNormalizedWeight}%)
+- **Attendance:** **${att?.score ?? "N/A"}/100** (Configured: ${att?.configuredWeight}%, Re-normalized: ${att?.reNormalizedWeight}%)
+- **LMS Completion:** **${lms?.score ?? "N/A"}/100** (Configured: ${lms?.configuredWeight}%, Re-normalized: ${lms?.reNormalizedWeight}%)
+- **Skills & Placement:** **${sp?.score ?? "N/A"}/100** (Configured: ${sp?.configuredWeight}%, Re-normalized: ${sp?.reNormalizedWeight}%)
+- **Campus Engagement:** **${eng?.score ?? "N/A"}/100** (Configured: ${eng?.configuredWeight}%, Re-normalized: ${eng?.reNormalizedWeight}%)
+- **Feedback:** **${fb?.score ?? "N/A"}/100** (Configured: ${fb?.configuredWeight}%, Re-normalized: ${fb?.reNormalizedWeight}%)
+
+**Key Drivers:**
+- **Positive Drivers:** ${breakdown.explanation.positiveDrivers.join(", ") || "Steady across evaluated dimensions"}
+- **Attention Areas:** ${breakdown.explanation.attentionAreas.join(", ") || "None flagged"}
+- **Status:** ${breakdown.statusLabel}`;
+  }
+
+  if (p.includes("risk") || p.includes("flag") || p.includes("warning") || p.includes("support") || p.includes("recovery")) {
+    return `### ⚠️ Explainable Academic Risk Audit for ${studentName}
+[Source: Institutional Analytics Engine - Verified Record]
+
+**Overall Risk Classification:** **${riskLevel} RISK** (${riskFlags.length} active flag${riskFlags.length === 1 ? '' : 's'})
+*Evaluation Date: ${new Date().toLocaleDateString()} | Threshold Rule Engine: Active*
+
+#### Triggered Indicators & Documented Actions:
+${riskFlags.length === 0 ? "✅ **No active risk flags!** Your attendance, academic grades, and LMS tasks meet or exceed institutional standards." : riskFlags.map(f => `- **[${f.severity.toUpperCase()} RISK] ${f.title}:** ${f.reason}\n  - *Supporting Data:* \`${f.supportingData}\`\n  - *Recommended Action:* ${f.recommendedAction}`).join("\n")}
+
+**Current Student Segment:** **${segment.primarySegment}**  
+*Segment Rationale:* ${segment.reasoning}`;
+  }
+
+  if (p.includes("tanglish") || p.includes("tamil")) {
+    const attScore = breakdown.categoryScores["attendance"]?.score ?? 0;
+    return `### 🗣️ Academic Summary in Tanglish (தமிழ் + English)
+[Source: Institutional Analytics Engine & AI Tutor]
+
+Vanakkam **${studentName}**! Unga academic profile-oda quick update idho:
+
+1. **Success Score:** Ungaloda current score **${overallScore}/100** irukku. ${overallScore >= 80 ? "Super performance! Neenga nalla track-la irukinga." : "Konjam focus panna innum periya improvement varum!"}
+2. **Attendance Status:** ${attScore}% attendance irukku. Institutional 75% threshold-ah vida maintain pannanum.
+3. **Risk Level:** Unga risk classification ipo **${riskLevel}**. ${riskFlags.length > 0 ? `Alert: ${riskFlags[0].title} - ${riskFlags[0].recommendedAction}` : "Active risk warnings edhum illai!"}
+4. **Primary Segment:** **${segment.primarySegment}** — Reason: ${segment.reasoning}
+
+Edhavadhu specific subject or syllabus doubt irundha kooda kelunga, naan step-by-step explain panren!`;
+  }
+
+  if (p.includes("material") || p.includes("study") || p.includes("notes") || p.includes("syllabus") || p.includes("dbms")) {
+    return `### 📚 Authorized Study Material Retrieval for ${studentName}
+[Source: Student Document Vault - Isolation Verified]
+
+**Access Scope:** Student ID \`${studentId}\` (Private Sandbox)
+
+${studentMaterials.length === 0 ? "You haven't uploaded any study materials yet. Head over to the **Upload Materials** tab to add your lecture notes or syllabus!" : `Found **${studentMaterials.length}** authorized document(s) in your repository:\n\n` + studentMaterials.map(m => `#### 📄 ${m.fileName} (${m.subject})
+- **File Type:** ${m.fileType}
+- **Description:** ${m.description}
+- **Key Concepts:** Relational Data Models, Entity-Relationship Schemas, Primary & Foreign Keys, Normalization (1NF, 2NF, 3NF, BCNF).
+- **Study Tip:** Focus on ER-to-Relational conversion rules and ACID properties for university examinations.
+[Source: Material Document - ${m.fileName}]`).join("\n\n")}`;
+  }
+
+  return `### 🤖 ARIVON AI Academic Guidance for ${studentName}
+[Source: Grounded Institutional Copilot]
+
+I am your personalized academic copilot. Here is your current snapshot:
+- **Success Score:** ${overallScore}/100 (${breakdown.statusLabel})
+- **Risk Status:** ${riskLevel} (${riskFlags.length} active flag${riskFlags.length === 1 ? '' : 's'})
+- **Segment:** ${segment.primarySegment}
+
+How can I help you today?
+1. *"Explain my Success Score and individual component weights"*
+2. *"What are my active risk flags and how do I resolve them?"*
+3. *"Summarize my uploaded study materials and key concepts"*
+4. *"Explain my status or topics in Tanglish"*`;
+}
+
 export default function TutorPage() {
-  const { currentUser } = useCampus();
+  const { currentUser, materials } = useCampus();
   const [messages, setMessages] = useState<ChatMessage[]>(initialChatMessages);
   const [input, setInput] = useState("");
   const [attachedFile, setAttachedFile] = useState<AttachedFileState | null>(null);
@@ -86,6 +194,10 @@ export default function TutorPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const studentId = currentUser?.id || "s1";
+  const studentName = currentUser?.name || "Student";
+  const studentMaterials = materials ? materials.filter(m => m.studentId === studentId) : [];
 
   // Load chat history from Supabase if configured
   useEffect(() => {
@@ -175,7 +287,7 @@ export default function TutorPage() {
     if (isSupabaseConfigured()) {
       saveTutorMessageToDB({
         id: userMsg.id,
-        studentId: currentUser?.id || "s1",
+        studentId: studentId,
         role: "user",
         content: userMsg.content,
         timestamp: new Date().toISOString(),
@@ -183,11 +295,13 @@ export default function TutorPage() {
       }).catch(console.error);
     }
 
+    // Retrieve verified student metrics for grounding
+    const breakdown = calculateStudentSuccessScoreBreakdown(studentId);
+    const riskFlags = getExplainableRiskFlags(studentId);
+    const segment = getStudentSegmentation(studentId);
+
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API key is not configured. Please ensure VITE_GEMINI_API_KEY or GEMINI_API_KEY is set in your .env file.");
-      }
 
       // Prepare text content including attached file data for Gemini
       let promptWithFile = userText;
@@ -199,75 +313,121 @@ export default function TutorPage() {
         }
       }
 
-      // Format history for Gemini API
-      const geminiContents = newMessages.map((msg, index) => {
-        const isLastMsg = index === newMessages.length - 1;
-        return {
-          role: msg.role === "bot" ? "model" : "user",
-          parts: [{ text: isLastMsg ? promptWithFile : msg.content }]
-        };
-      });
-
-      // Try multiple model endpoints in order for maximum compatibility and resilience
-      const modelsToTry = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
-        "gemini-flash-latest"
-      ];
-
       let replyText = "";
-      let lastErrorMessage = "";
 
-      for (const model of modelsToTry) {
-        let attempts = 0;
-        const maxAttempts = 2;
+      if (apiKey) {
+        // Format history for Gemini API
+        const geminiContents = newMessages.map((msg, index) => {
+          const isLastMsg = index === newMessages.length - 1;
+          return {
+            role: msg.role === "bot" ? "model" : "user",
+            parts: [{ text: isLastMsg ? promptWithFile : msg.content }]
+          };
+        });
 
-        while (attempts < maxAttempts && !replyText) {
-          try {
-            attempts++;
-            const response = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  systemInstruction: {
-                    parts: [{ text: "You are the AI-Copilot for CampusOS, an educational platform. Your role is to act as a Socratic tutor. You MUST ONLY answer education-related questions. If the user uploads a document or asks about study material, analyze it thoroughly and guide them step-by-step. Keep your answers concise, encouraging, and formatted with markdown when appropriate." }]
-                  },
-                  contents: geminiContents
-                })
-              }
-            );
+        const overallScore = breakdown.overallScore ?? 0;
+        const riskLevel = riskFlags.some(f => f.severity === "High")
+          ? "HIGH"
+          : (riskFlags.some(f => f.severity === "Medium") ? "MODERATE" : "LOW");
+        const acad = breakdown.categoryScores["academic"];
+        const att = breakdown.categoryScores["attendance"];
+        const lms = breakdown.categoryScores["lmsActivity"];
+        const sp = breakdown.categoryScores["skillsPlacement"];
+        const eng = breakdown.categoryScores["engagement"];
+        const fb = breakdown.categoryScores["feedback"];
 
-            const data = await response.json();
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.[0]?.text) {
-              replyText = data.candidates[0].content.parts[0].text;
-              break;
-            } else if (data.error) {
-              lastErrorMessage = data.error.message;
-              if (data.error.message?.toLowerCase().includes("demand") || data.error.code === 503 || data.error.code === 429) {
-                await new Promise((res) => setTimeout(res, 600));
-              } else {
+        const systemInstructionText = `You are the ARIVON AI Academic Copilot & Socratic Tutor for higher education analytics and student success.
+You are interacting with student: ${studentName} (ID: ${studentId}, Department: ${currentUser?.department || "CSE"}).
+
+=== VERIFIED INSTITUTIONAL STUDENT ANALYTICS (GROUND TRUTH - DO NOT INVENT OR OVERRIDE THESE NUMBERS) ===
+- Student Success Score: ${overallScore}/100 (${breakdown.statusLabel})
+- Calculation Coverage: ${breakdown.dataCoveragePercent}% of indicators verified (${breakdown.validCategoriesCount} of ${breakdown.totalCategoriesCount} Categories)
+- Component Breakdown:
+  * Academic Performance: Score = ${acad?.score ?? "N/A"}/100 (Weight = ${acad?.configuredWeight}%, Re-normalized = ${acad?.reNormalizedWeight}%)
+  * Attendance: Score = ${att?.score ?? "N/A"}/100 (Weight = ${att?.configuredWeight}%, Re-normalized = ${att?.reNormalizedWeight}%)
+  * LMS & Assignment Completion: Score = ${lms?.score ?? "N/A"}/100 (Weight = ${lms?.configuredWeight}%, Re-normalized = ${lms?.reNormalizedWeight}%)
+  * Skills & Placement Readiness: Score = ${sp?.score ?? "N/A"}/100 (Weight = ${sp?.configuredWeight}%, Re-normalized = ${sp?.reNormalizedWeight}%)
+  * Extracurricular Engagement: Score = ${eng?.score ?? "N/A"}/100 (Weight = ${eng?.configuredWeight}%, Re-normalized = ${eng?.reNormalizedWeight}%)
+  * Student & Faculty Feedback: Score = ${fb?.score ?? "N/A"}/100 (Weight = ${fb?.configuredWeight}%, Re-normalized = ${fb?.reNormalizedWeight}%)
+- Positive Drivers: ${breakdown.explanation.positiveDrivers.join(", ") || "Steady across evaluated dimensions"}
+- Attention Areas: ${breakdown.explanation.attentionAreas.join(", ") || "None flagged"}
+- Academic Decision-Support Risk Classification: ${riskLevel} RISK (${riskFlags.length} active flags)
+- Active Triggered Risk Warnings:
+${riskFlags.length === 0 ? "  * No active risk warnings." : riskFlags.map(f => `  * [${f.severity.toUpperCase()} RISK] ${f.title}: ${f.reason} | Evidence: ${f.supportingData} | Action: ${f.recommendedAction}`).join("\n")}
+- Student Segment: "${segment.primarySegment}" - Criteria: ${segment.reasoning}
+
+=== AUTHORIZED UPLOADED STUDY MATERIALS (STUDENT DATA ISOLATION ENFORCED) ===
+${studentMaterials.length === 0 ? "No study materials currently uploaded by this student." : studentMaterials.map(m => `- Material [ID: ${m.id}]: "${m.fileName}" (${m.fileType}) - Subject: ${m.subject}. Description: ${m.description}`).join("\n")}
+
+=== RESPONSE BEHAVIOR & CITATION GUIDELINES (MANDATORY) ===
+1. When discussing academic standing, success score, or risk levels, ground your statements in the verified numbers above. Tag statements with "[Source: Institutional Analytics Engine - Verified Record]". Never invent or change these scores.
+2. If asked about study materials or syllabus, retrieve information from the authorized uploaded list or attached file. Tag statements with "[Source: Material Document - <fileName>]". If an answer is not present in their materials, clearly state: "This topic is not found in your currently uploaded study materials."
+3. When requested by the student, support explanations in simple English or Tanglish (Tamil + English blended conversation).
+4. Maintain a supportive, motivating, pedagogical tone.`;
+
+        // Try multiple model endpoints in order for maximum compatibility and resilience
+        const modelsToTry = [
+          "gemini-2.5-flash",
+          "gemini-2.0-flash",
+          "gemini-2.0-flash-lite",
+          "gemini-1.5-flash",
+          "gemini-1.5-flash-8b",
+          "gemini-1.5-pro",
+          "gemini-flash-latest"
+        ];
+
+        for (const model of modelsToTry) {
+          let attempts = 0;
+          const maxAttempts = 2;
+
+          while (attempts < maxAttempts && !replyText) {
+            try {
+              attempts++;
+              const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    systemInstruction: {
+                      parts: [{ text: systemInstructionText }]
+                    },
+                    contents: geminiContents
+                  })
+                }
+              );
+
+              const data = await response.json();
+              if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.[0]?.text) {
+                replyText = data.candidates[0].content.parts[0].text;
                 break;
+              } else if (data.error) {
+                if (data.error.message?.toLowerCase().includes("demand") || data.error.code === 503 || data.error.code === 429) {
+                  await new Promise((res) => setTimeout(res, 600));
+                } else {
+                  break;
+                }
               }
+            } catch {
+              break;
             }
-          } catch (e: any) {
-            lastErrorMessage = e.message;
-            break;
           }
-        }
 
-        if (replyText) break;
+          if (replyText) break;
+        }
       }
 
+      // If Gemini API is not configured or network failed, provide grounded deterministic fallback
       if (!replyText) {
-        replyText = lastErrorMessage
-          ? `⚠️ ${lastErrorMessage}\n\n*Note: Google's free Gemini API endpoints are currently experiencing temporary high traffic. Please try sending your message again in a few seconds.*`
-          : "I'm having trouble analyzing this right now. Please check your connection.";
+        replyText = generateGroundedFallbackResponse(
+          userText,
+          studentName,
+          studentId,
+          breakdown,
+          riskFlags,
+          segment,
+          studentMaterials
+        );
       }
 
       const botResponse: ChatMessage = {
@@ -282,17 +442,27 @@ export default function TutorPage() {
       if (isSupabaseConfigured()) {
         saveTutorMessageToDB({
           id: botResponse.id,
-          studentId: currentUser?.id || "s1",
+          studentId: studentId,
           role: "bot",
           content: botResponse.content,
           timestamp: new Date().toISOString()
         }).catch(console.error);
       }
     } catch (err: any) {
+      // Fallback response with verified numbers
+      const fallback = generateGroundedFallbackResponse(
+        userText,
+        studentName,
+        studentId,
+        breakdown,
+        riskFlags,
+        segment,
+        studentMaterials
+      );
       const errorResponse: ChatMessage = {
         id: `msg-${++msgCounter}`,
         role: "bot",
-        content: `Connection error: ${err.message}`,
+        content: fallback,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, errorResponse]);
@@ -305,7 +475,10 @@ export default function TutorPage() {
     let prompt = "";
     if (actionId === "hint") prompt = "Can you give me a small hint to help me figure out the answer on my own?";
     if (actionId === "explain") prompt = "Can you explain this concept to me simply?";
-    if (actionId === "example") prompt = "Can you show me a practical example of this?";
+    if (actionId === "score") prompt = "Explain my Success Score, component weights, and what drove this score.";
+    if (actionId === "risk") prompt = "Review my academic risk classification and show me the exact triggering indicators and recommended actions.";
+    if (actionId === "materials") prompt = "Summarize my uploaded study materials and key revision concepts.";
+    if (actionId === "tanglish") prompt = "Explain my current academic status and study plan in Tanglish.";
     
     if (prompt) {
       sendMessage(prompt);

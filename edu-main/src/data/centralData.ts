@@ -7,6 +7,11 @@ export interface User {
   email?: string;
   avatar?: string;
   department?: string;
+  isDemo?: boolean;
+  status?: "active" | "pending_approval" | "suspended";
+  registrationNumber?: string;
+  designation?: string;
+  institution?: string;
 }
 
 export interface Student extends User {
@@ -28,6 +33,9 @@ export interface Mentor extends User {
   specialization: string[];
   availability: string[]; // e.g., "Monday 4:00 PM"
   currentLocation?: string;
+  rating?: number;
+  reviewsCount?: number;
+  isRecommended?: boolean;
 }
 
 export interface ScheduleItem {
@@ -95,10 +103,14 @@ export interface TicketAttachment {
 export interface SupportTicket {
   id: string;
   creatorId: string;
+  creatorName?: string;
+  subject?: string;
   category: "Academic" | "Mentor" | "Technical" | "Facilities" | "Other";
   description: string;
-  status: "pending" | "in_progress" | "resolved";
+  status: "submitted" | "under_review" | "in_progress" | "resolved" | "pending";
   createdAt: string;
+  updatedAt?: string;
+  adminResponse?: string;
   attachments?: TicketAttachment[];
 }
 
@@ -108,6 +120,13 @@ export interface Feedback {
   text: string;
   location?: string;
   createdAt: string;
+  facultyId?: string;
+  facultyName?: string;
+  studentId?: string;
+  studentName?: string;
+  rating?: number;
+  subject?: string;
+  isAnonymous?: boolean;
 }
 
 export interface Material {
@@ -226,9 +245,12 @@ export const initialMentors: Mentor[] = [
     role: "faculty",
     email: "rahul.k@faculty.edu",
     department: "Computer Science",
-    specialization: ["DBMS", "SQL", "Database Design"],
+    specialization: ["DBMS", "SQL", "Data Structures", "Career Guidance", "System Design"],
     availability: ["Monday 4:30 PM", "Tuesday 3:00 PM"],
-    currentLocation: "Faculty Block / Room 204"
+    currentLocation: "Faculty Block / Room 204",
+    rating: 4.8,
+    reviewsCount: 32,
+    isRecommended: true
   },
   {
     id: "f2",
@@ -236,9 +258,38 @@ export const initialMentors: Mentor[] = [
     role: "faculty",
     email: "priya.s@faculty.edu",
     department: "Information Technology",
-    specialization: ["Data Structures", "Algorithms"],
-    availability: ["Wednesday 10:00 AM"],
-    currentLocation: "Block A / Room 101"
+    specialization: ["Web Development", "AI/ML", "Operating Systems", "Placement Guidance"],
+    availability: ["Wednesday 10:00 AM", "Thursday 2:00 PM"],
+    currentLocation: "Block A / Room 101",
+    rating: 4.6,
+    reviewsCount: 28,
+    isRecommended: false
+  },
+  {
+    id: "f3",
+    name: "Amit Singh",
+    role: "faculty",
+    email: "amit.s@faculty.edu",
+    department: "Electronics & Communication",
+    specialization: ["Computer Networks", "Embedded Systems", "IoT", "Research Guidance"],
+    availability: ["Tuesday 2:00 PM", "Thursday 4:00 PM"],
+    currentLocation: "Block B / Room 305",
+    rating: 4.7,
+    reviewsCount: 21,
+    isRecommended: false
+  },
+  {
+    id: "f4",
+    name: "Neha Patel",
+    role: "faculty",
+    email: "neha.p@faculty.edu",
+    department: "Mathematics",
+    specialization: ["Discrete Math", "Probability", "Statistics", "Gate Preparation"],
+    availability: ["Friday 11:00 AM", "Monday 2:00 PM"],
+    currentLocation: "Science Block / Room 12",
+    rating: 4.9,
+    reviewsCount: 40,
+    isRecommended: false
   }
 ];
 
@@ -345,6 +396,42 @@ export const initialMentorRequests: MentorRequest[] = [
 export const initialMaintenanceTickets: MaintenanceTicket[] = [];
 export const initialSupportTickets: SupportTicket[] = [];
 export const initialFeedback: Feedback[] = [
-  { id: "fb1", category: "Wi-Fi", text: "Wi-Fi in Block C is very slow in the evening.", location: "Block C", createdAt: new Date().toISOString() },
-  { id: "fb2", category: "Wi-Fi", text: "Can't connect to Wi-Fi near Library.", location: "Library", createdAt: new Date().toISOString() },
+  { id: "fb1", category: "Wi-Fi", text: "Wi-Fi in Block C is very slow in the evening.", location: "Block C", createdAt: new Date(Date.now() - 86400000 * 3).toISOString() },
+  { id: "fb2", category: "Wi-Fi", text: "Can't connect to Wi-Fi near Library.", location: "Library", createdAt: new Date(Date.now() - 86400000 * 4).toISOString() },
+  {
+    id: "fb_fac_1",
+    category: "Teaching Quality",
+    text: "Prof. Priya breaks down complex dynamic programming & tree recursion with intuitive visuals. Her 1:1 session gave me huge confidence for code interviews!",
+    facultyId: "f2",
+    facultyName: "Priya Sharma",
+    studentId: "s1",
+    studentName: "Arun Kumar",
+    rating: 5,
+    subject: "Data Structures & Algorithms",
+    createdAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: "fb_fac_2",
+    category: "Mentorship & Guidance",
+    text: "Dr. Rahul Kumar provided thorough guidance on relational database normalization and SQL query optimization. Highly accessible during office hours.",
+    facultyId: "f1",
+    facultyName: "Dr. Rahul Kumar",
+    studentId: "s2",
+    studentName: "Ananya Roy",
+    rating: 5,
+    subject: "DBMS & SQL",
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
+  },
+  {
+    id: "fb_fac_3",
+    category: "Doubt Resolution",
+    text: "Excellent doubt clearing on graph theory. Always patient and ensures every student follows along before moving forward.",
+    facultyId: "f2",
+    facultyName: "Priya Sharma",
+    studentId: "s2",
+    studentName: "Ananya Roy",
+    rating: 4,
+    subject: "Algorithms",
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString()
+  }
 ];

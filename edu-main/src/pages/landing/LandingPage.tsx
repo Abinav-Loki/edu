@@ -62,10 +62,10 @@ export default function LandingPage() {
           </div>
           <div>
             <span className="font-black text-base text-slate-900 dark:text-white tracking-tight block leading-none">
-              CampusOS
+              ARIVON AI
             </span>
             <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest block mt-0.5">
-              Success Intelligence
+              Students Analytics
             </span>
           </div>
         </Link>
@@ -92,13 +92,13 @@ export default function LandingPage() {
         {/* RIGHT: Login & Explore Platform Actions */}
         <div className="hidden md:flex items-center gap-3">
           <Link
-            to="/student/login"
+            to="/login"
             className="text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:text-indigo-600 px-3 py-2 transition cursor-pointer"
           >
             Log In
           </Link>
           <Link
-            to="/dashboard"
+            to="/login"
             className="text-xs font-extrabold px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md shadow-indigo-600/20 transition-all hover:-translate-y-0.5 flex items-center gap-1 cursor-pointer"
           >
             <span>Explore Platform</span>
@@ -136,10 +136,10 @@ export default function LandingPage() {
           </button>
 
           <div className="pt-2 flex flex-col gap-2">
-            <Link to="/student/login" className="w-full text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-extrabold">
+            <Link to="/login" className="w-full text-center py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-extrabold">
               Log In
             </Link>
-            <Link to="/dashboard" className="w-full text-center py-3 rounded-xl bg-indigo-600 text-white font-extrabold shadow-md">
+            <Link to="/login" className="w-full text-center py-3 rounded-xl bg-indigo-600 text-white font-extrabold shadow-md">
               Explore Platform
             </Link>
           </div>

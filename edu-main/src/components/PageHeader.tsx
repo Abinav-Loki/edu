@@ -17,16 +17,16 @@ export default function PageHeader({
     <div className="flex items-start justify-between gap-4 mb-6">
       <div>
         {badge && (
-          <div className="inline-flex items-center gap-1.5 bg-sky-50 border border-sky-100 rounded-full px-3 py-1 text-xs font-bold text-sky-600 mb-2 shadow-sm">
+          <div className="inline-flex items-center gap-1.5 bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-800/80 rounded-full px-3 py-1 text-xs font-bold text-sky-600 dark:text-sky-300 mb-2 shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-400" aria-hidden="true" />
             {badge}
           </div>
         )}
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 leading-tight tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-white leading-tight tracking-tight">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm text-slate-500 mt-1 font-medium">{subtitle}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-300 mt-1 font-medium">{subtitle}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}

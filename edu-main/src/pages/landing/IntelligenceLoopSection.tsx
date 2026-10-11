@@ -35,8 +35,8 @@ export default function IntelligenceLoopSection() {
   return (
     <section ref={sectionRef} className="py-24 px-6 bg-transparent relative border-y border-slate-200/50">
       <div className="max-w-5xl mx-auto text-center">
-        <h2 className="text-3xl md:text-4xl font-black text-slate-800 mb-16">
-          The CampusOS Intelligence Loop
+        <h2 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-slate-100 mb-16">
+          The ARIVON AI Intelligence Loop
         </h2>
 
         <div className="relative flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 max-w-4xl mx-auto">

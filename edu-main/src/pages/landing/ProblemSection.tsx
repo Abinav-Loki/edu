@@ -6,7 +6,7 @@ const problems = [
     icon: Layers,
     title: "Signals Are Scattered",
     subtitle: "Fragmented Data",
-    description: "Academic, attendance, LMS engagement, and support ticket data live in isolated silos across campus.",
+    description: "Academic, attendance, LMS engagement, and student complaint data live in isolated silos across campus.",
     color: "text-sky-600",
     bg: "bg-sky-50 dark:bg-sky-950/50",
     border: "border-sky-100 dark:border-sky-900/50"

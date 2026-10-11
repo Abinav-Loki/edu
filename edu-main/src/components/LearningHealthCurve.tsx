@@ -223,13 +223,13 @@ export default function LearningHealthCurve() {
           </div>
 
           {/* Event Signal Legend Footer */}
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4 text-[11px] font-semibold text-slate-500">
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white dark:border-slate-900" />
               <span>Week 2: Attendance drop</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white" />
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white dark:border-slate-900" />
               <span>Week 4: Quiz drop</span>
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function LearningHealthCurve() {
 
             {/* List of significant metric shifts */}
             <div className="space-y-3 mb-5">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400 flex items-center justify-center shrink-0">
                     <ArrowDownRight className="w-4 h-4" />
@@ -261,7 +261,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       Quiz performance
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">Assessment score drop</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Assessment score drop</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 px-2 py-1 rounded-lg">
@@ -269,7 +269,7 @@ export default function LearningHealthCurve() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400 flex items-center justify-center shrink-0">
                     <ArrowDownRight className="w-4 h-4" />
@@ -278,7 +278,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       Assignment avg
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">2 late submissions</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">2 late submissions</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 px-2 py-1 rounded-lg">
@@ -286,7 +286,7 @@ export default function LearningHealthCurve() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400 flex items-center justify-center shrink-0">
                     <ArrowDownRight className="w-4 h-4" />
@@ -295,7 +295,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       Attendance rate
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">68% current rate</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">68% current rate</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 px-2 py-1 rounded-lg">
@@ -303,7 +303,7 @@ export default function LearningHealthCurve() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <ArrowUpRight className="w-4 h-4" />
@@ -312,7 +312,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       SQL practice
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">AI Tutor sessions</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">AI Tutor sessions</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-1 rounded-lg">

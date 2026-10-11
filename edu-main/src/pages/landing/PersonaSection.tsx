@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { GraduationCap, Users, Building2, CheckCircle2 } from "lucide-react";
 
 const personas = [
@@ -47,7 +48,7 @@ const personas = [
       "Subject-level & course performance benchmarks",
       "Intervention effectiveness & ROI analytics",
       "Historical student success retention trends",
-      "Universal Campus Support Ticket dispatch"
+      "Universal Campus Complaint & Grievance dispatch"
     ]
   }
 ];
@@ -66,7 +67,7 @@ export default function PersonaSection() {
             Built for every campus stakeholder.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            CampusOS provides dedicated interfaces for students, mentors, and leadership — all connected through a single intelligence layer.
+            ARIVON AI provides dedicated interfaces for students, mentors, and leadership — all connected through a single intelligence layer.
           </p>
         </div>
 
@@ -112,9 +113,12 @@ export default function PersonaSection() {
                 </div>
 
                 <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 text-center">
-                  <span className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer">
+                  <Link
+                    to={persona.role.includes("STUDENT") ? "/student/login" : persona.role.includes("FACULTY") ? "/faculty/login" : "/admin/login"}
+                    className="inline-block text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                  >
                     Explore {persona.role} Experience →
-                  </span>
+                  </Link>
                 </div>
               </div>
             );
