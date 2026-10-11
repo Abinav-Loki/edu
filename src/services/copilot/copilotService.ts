@@ -252,7 +252,10 @@ export async function generateCopilotResponse(
   // Check if this is an explicit student status / quiz count query
   const deterministicResponse = getDeterministicStatusResponse(rawPrompt, studentContext);
 
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || "";
+  const apiKey =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_GEMINI_API_KEY) ||
+    (typeof import.meta !== "undefined" && import.meta.env?.GEMINI_API_KEY) ||
+    "";
 
   // 1. DIRECT CALL TO GOOGLE GEMINI API (With automatic model fallback)
   if (apiKey && apiKey.trim().length > 0 && !apiKey.includes("your-gemini-api-key")) {

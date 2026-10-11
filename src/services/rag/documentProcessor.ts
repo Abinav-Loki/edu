@@ -1,15 +1,20 @@
 import { supabase, isSupabaseConfigured, authGetSession } from "../../lib/supabase";
 import { DocumentChunk, IngestionResult, ProcessingStatus } from "./types";
 
-// Dynamic import for pdfjs-dist
+// Lazy dynamic import for pdfjs-dist
 let pdfjsLib: any = null;
-try {
-  pdfjsLib = await import("pdfjs-dist");
-  if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+async function getPdfLib() {
+  if (!pdfjsLib) {
+    try {
+      pdfjsLib = await import("pdfjs-dist");
+      if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+      }
+    } catch (err) {
+      console.warn("[RAG Document Processor] pdfjs-dist import fallback mode active");
+    }
   }
-} catch (err) {
-  console.warn("[RAG Document Processor] pdfjs-dist import fallback mode active");
+  return pdfjsLib;
 }
 
 export const SUPPORTED_EMBEDDING_MODEL = "gemini-embedding-2";
@@ -95,8 +100,9 @@ export async function extractTextWithPages(file: File): Promise<{ pageNumber: nu
   if (fileExtension === "pdf" || fileType.includes("pdf")) {
     try {
       const arrayBuffer = await file.arrayBuffer();
-      if (pdfjsLib && pdfjsLib.getDocument) {
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const lib = await getPdfLib();
+      if (lib && lib.getDocument) {
+        const loadingTask = lib.getDocument({ data: arrayBuffer });
         const pdfDoc = await loadingTask.promise;
         const pages: { pageNumber: number; text: string }[] = [];
 
