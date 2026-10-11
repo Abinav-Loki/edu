@@ -104,7 +104,7 @@ export default function StudentCharacter({
           {isChallenged
             ? "Facing Quiz Challenge"
             : isSupported
-            ? "CampusOS AI Supported"
+            ? "ARIVON AI Supported"
             : isAchieving
             ? "Mastery Achieved! 🏆"
             : "Active Learner"}

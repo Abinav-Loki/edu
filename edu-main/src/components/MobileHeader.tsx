@@ -2,18 +2,34 @@ import { useState } from "react";
 import { GraduationCap, Menu, X, Search } from "lucide-react";
 import { useSidebar } from "../context/SidebarContext";
 import { useCampus } from "../context/CampusContext";
+import { useLearning } from "../context/LearningContext";
+import { getFrameById } from "../data/avatarFramesData";
 import NotificationDropdown from "./NotificationDropdown";
 import SearchAutocomplete from "./SearchAutocomplete";
 
 function Avatar({ name }: { name: string }) {
+  const { profile } = useLearning();
+  const equippedFrame = getFrameById(profile?.frameId);
+
   const initials = name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase();
   return (
-    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-sky-500/20 border border-white/20 shrink-0">
-      {initials}
+    <div className="relative shrink-0">
+      <div
+        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+          equippedFrame ? equippedFrame.ringClasses : "bg-gradient-to-br from-sky-400 to-indigo-500 text-white"
+        } ${equippedFrame?.avatarBg || "bg-indigo-600 text-white shadow-md shadow-sky-500/20"}`}
+      >
+        {initials}
+      </div>
+      {equippedFrame?.emoji && (
+        <div className="absolute -bottom-1 -right-1 text-[11px] leading-none select-none pointer-events-none">
+          {equippedFrame.emoji}
+        </div>
+      )}
     </div>
   );
 }
@@ -48,7 +64,7 @@ export default function MobileHeader() {
               Hello, {currentUser?.name?.split(" ")[0] || "User"} 👋
             </div>
             <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-tight mt-0.5 truncate">
-              {(currentUser as any)?.course || currentUser?.department || currentUser?.role || "CampusOS AI"}
+              {(currentUser as any)?.course || currentUser?.department || currentUser?.role || "ARIVON AI"}
             </div>
           </div>
         </div>

@@ -5,8 +5,13 @@ import NotificationDropdown from "./NotificationDropdown";
 import SearchAutocomplete from "./SearchAutocomplete";
 import { useCampus } from "../context/CampusContext";
 import { useSettings } from "../context/SettingsContext";
+import { useLearning } from "../context/LearningContext";
+import { getFrameById } from "../data/avatarFramesData";
 
 function Avatar({ name }: { name: string }) {
+  const { profile } = useLearning();
+  const equippedFrame = getFrameById(profile?.frameId);
+
   const initials = name
     .split(" ")
     .map((n) => n[0])
@@ -14,11 +19,19 @@ function Avatar({ name }: { name: string }) {
     .toUpperCase();
 
   return (
-    <div
-      className="w-8 h-8 rounded-full primary-gradient flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-md shadow-sky-500/20"
-      aria-label={`Avatar for ${name}`}
-    >
-      {initials}
+    <div className="relative shrink-0" aria-label={`Avatar for ${name} with ${equippedFrame?.name || 'Standard'} frame`}>
+      <div
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
+          equippedFrame ? equippedFrame.ringClasses : "primary-gradient text-white"
+        } ${equippedFrame?.avatarBg || "bg-indigo-600 text-white shadow-md shadow-sky-500/20"}`}
+      >
+        {initials}
+      </div>
+      {equippedFrame?.emoji && (
+        <div className="absolute -bottom-1 -right-1 text-[11px] leading-none select-none drop-shadow-sm pointer-events-none">
+          {equippedFrame.emoji}
+        </div>
+      )}
     </div>
   );
 }
@@ -37,6 +50,14 @@ export default function TopBar() {
       role="banner"
     >
       <RoleSwitcher />
+      {/* Brand & Platform Identifier on Top Navigation */}
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/70 dark:bg-slate-800/80 backdrop-blur-md border border-white/80 dark:border-slate-700/80 shadow-xs shrink-0">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+        <span className="text-xs font-black tracking-wider text-slate-900 dark:text-white uppercase">ARIVON AI</span>
+        <span className="text-slate-300 dark:text-slate-600">•</span>
+        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Students Analytics</span>
+      </div>
+
       {/* Search or Campus Status Pill */}
       {!hideSearchBar ? (
         <div className="flex-1 max-w-2xl">
@@ -46,7 +67,7 @@ export default function TopBar() {
         <div className="flex-1 flex items-center justify-center">
           <div className="hidden lg:flex items-center gap-2.5 px-4 py-1.5 rounded-2xl bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-white/90 dark:border-slate-700/80 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span>CampusOS Academic Portal</span>
+            <span>ARIVON AI Academic Portal</span>
             <span className="text-slate-300 dark:text-slate-600">•</span>
             <span className="text-indigo-600 dark:text-indigo-400 font-extrabold capitalize">
               {location.pathname.replace('/', '').replace('-', ' ')}

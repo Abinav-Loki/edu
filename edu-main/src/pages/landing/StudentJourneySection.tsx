@@ -23,10 +23,10 @@ export default function StudentJourneySection() {
             Trajectory Intelligence
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-            Every student has a journey. CampusOS makes it visible.
+            Every student has a journey. ARIVON AI makes it visible.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            CampusOS tracks change over time rather than relying on a single static snapshot — giving educators full visibility into the student lifecycle.
+            ARIVON AI tracks change over time rather than relying on a single static snapshot — giving educators full visibility into the student lifecycle.
           </p>
         </div>
 

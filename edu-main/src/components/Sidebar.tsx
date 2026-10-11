@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { useRef, useEffect } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Home,
   Bot,
@@ -8,7 +9,6 @@ import {
   Calendar,
   Users,
   ShieldAlert,
-  Wrench,
   GraduationCap,
   Ticket,
   Settings,
@@ -16,7 +16,11 @@ import {
   Clock,
   BookOpen,
   Menu,
-  X
+  X,
+  ShoppingBag,
+  Database,
+  AlertTriangle,
+  Layers
 } from "lucide-react";
 import { useCampus } from "../context/CampusContext";
 import { useSidebar } from "../context/SidebarContext";
@@ -25,12 +29,13 @@ const studentNav = [
   { to: "/dashboard", label: "Dashboard", icon: Home },
   { to: "/tutor", label: "AI Copilot", icon: Bot },
   { to: "/learning-arena", label: "Learning Arena", icon: Gamepad2 },
+  { to: "/shop", label: "Shop", icon: ShoppingBag },
   { to: "/study-planner", label: "Study Planner", icon: Calendar },
   { to: "/progress", label: "Student 360", icon: TrendingUp },
   { to: "/find-mentor", label: "Find Mentor", icon: Search },
   { to: "/library", label: "Digital Library", icon: BookOpen },
   { to: "/upload-materials", label: "Upload Materials", icon: ClipboardList },
-  { to: "/support", label: "Support Tickets", icon: Ticket },
+  { to: "/support", label: "Raise Complaint", icon: Ticket },
   { to: "/settings", label: "Profile", icon: Settings },
 ];
 
@@ -45,9 +50,10 @@ const facultyNav = [
 
 const adminNav = [
   { to: "/admin", label: "Control Room", icon: ShieldAlert },
-  { to: "/admin/assets", label: "Assets & QR", icon: Search },
-  { to: "/admin/maintenance", label: "Maintenance", icon: Wrench },
-  { to: "/support", label: "Campus Tickets", icon: Ticket },
+  { to: "/admin/data-integration", label: "Data Integration", icon: Database },
+  { to: "/admin/at-risk", label: "At-Risk & Intervene", icon: AlertTriangle },
+  { to: "/admin/segmentation", label: "Segmentation", icon: Layers },
+  { to: "/support", label: "Complaint Management", icon: Ticket },
   { to: "/settings", label: "Profile", icon: Settings },
 ];
 
@@ -67,11 +73,24 @@ function PlantIllustration() {
 export default function Sidebar() {
   const { activeRole } = useCampus();
   const { isExpanded, toggleExpanded, isMobileOpen, closeMobile } = useSidebar();
+  const location = useLocation();
+  const desktopNavRef = useRef<HTMLElement>(null);
 
   const navItems = 
     activeRole === "student" ? studentNav :
     activeRole === "faculty" ? facultyNav :
     adminNav;
+
+  // Auto-scroll the active nav button to center whenever the route changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const activeEl = desktopNavRef.current?.querySelector(".nav-link.active");
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [location.pathname, isExpanded]);
 
   return (
     <>
@@ -100,10 +119,10 @@ export default function Sidebar() {
             </div>
             <div>
               <div className="text-white font-bold text-lg leading-tight tracking-tight">
-                CampusOS AI
+                ARIVON AI
               </div>
               <div className="text-white/80 text-[11px] font-medium leading-tight mt-0.5 tracking-wide">
-                Smart Campus Layer
+                Students Analytics
               </div>
             </div>
           </div>
@@ -122,7 +141,10 @@ export default function Sidebar() {
               key={to}
               to={to}
               end={to === "/dashboard" || to === "/faculty" || to === "/admin"}
-              onClick={closeMobile}
+              onClick={(e) => {
+                closeMobile();
+                e.currentTarget.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+              }}
               className={({ isActive }) =>
                 `nav-link${isActive ? " active" : ""}`
               }
@@ -158,10 +180,12 @@ export default function Sidebar() {
         aria-label="Main navigation"
       >
         {/* Header with Hamburger Button + Logo */}
-        <div className="flex items-center px-4 py-5 border-b border-white/10 relative min-h-[72px]">
+        <div className={`flex items-center py-5 border-b border-white/10 relative min-h-[72px] ${
+          isExpanded ? "px-4" : "px-0 justify-center w-full"
+        }`}>
           <button
             onClick={toggleExpanded}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all shrink-0 cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+            className="w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all shrink-0 cursor-pointer shadow-sm hover:scale-105 active:scale-95 mx-auto"
             aria-label={isExpanded ? "Collapse navigation" : "Expand navigation"}
             aria-expanded={isExpanded}
           >
@@ -179,25 +203,45 @@ export default function Sidebar() {
             </div>
             <div>
               <div className="text-white font-bold text-base leading-tight tracking-tight">
-                CampusOS AI
+                ARIVON AI
               </div>
               <div className="text-white/80 text-[10px] font-medium leading-tight tracking-wide">
-                Smart Campus Layer
+                Students Analytics
               </div>
             </div>
           </div>
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 px-3 py-5 space-y-2 overflow-y-auto overflow-x-hidden">
+        <nav
+          ref={desktopNavRef}
+          className={`flex-1 py-5 space-y-2.5 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${
+            isExpanded ? "px-3" : "px-0 w-full flex flex-col items-center"
+          }`}
+        >
           {navItems.map(({ to, label, icon: Icon }) => (
-            <div key={to} className="relative group flex items-center justify-center">
+            <div
+              key={to}
+              className={`relative group flex items-center justify-center ${
+                isExpanded ? "w-full" : "w-full px-0"
+              }`}
+            >
               <NavLink
                 to={to}
                 end={to === "/dashboard" || to === "/faculty" || to === "/admin"}
+                onClick={(e) => {
+                  // Smoothly align the clicked button to center of sidebar
+                  e.currentTarget.scrollIntoView({
+                    block: "center",
+                    inline: "center",
+                    behavior: "smooth",
+                  });
+                }}
                 className={({ isActive }) =>
                   `nav-link ${isActive ? "active" : ""} ${
-                    isExpanded ? "justify-start px-3" : "justify-center px-0 w-10 h-10 mx-auto"
+                    isExpanded
+                      ? "justify-start px-3.5 py-2.5 w-full"
+                      : "nav-link-collapsed !w-11 !h-11 !p-0 !mx-auto !justify-center flex items-center justify-center rounded-xl transition-all"
                   }`
                 }
                 aria-label={label}
@@ -205,7 +249,7 @@ export default function Sidebar() {
                 <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
                 <span
                   className={`font-semibold transition-all duration-300 whitespace-nowrap overflow-hidden ${
-                    isExpanded ? "opacity-100 max-w-[150px] ml-1" : "opacity-0 max-w-0"
+                    isExpanded ? "opacity-100 max-w-[150px] ml-1.5" : "opacity-0 max-w-0 pointer-events-none"
                   }`}
                 >
                   {label}

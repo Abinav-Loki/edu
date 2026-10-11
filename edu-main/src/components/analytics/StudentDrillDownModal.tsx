@@ -20,8 +20,10 @@ import {
   simulateWhatIfScenario,
   getStudentAnalyticsExplanation,
   getStudentIntelligence,
+  syncStudentAnalytics,
 } from "../../intelligence/analyticsService";
 import { SCORING_DISCLAIMER } from "../../intelligence/scoringConfig";
+import { useCampus } from "../../context/CampusContext";
 import GlassCard from "../GlassCard";
 
 interface StudentDrillDownModalProps {
@@ -37,12 +39,21 @@ export default function StudentDrillDownModal({
   onClose,
   onCreateIntervention,
 }: StudentDrillDownModalProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "risks" | "whatif" | "explain">("overview");
+  const { updateStudent } = useCampus();
+  const [activeTab, setActiveTab] = useState<"overview" | "risks" | "whatif" | "explain" | "update">("overview");
 
   // What-If local state
   const [hypoAttendance, setHypoAttendance] = useState<number>(75);
   const [hypoQuiz, setHypoQuiz] = useState<number>(70);
   const [hypoPlacement, setHypoPlacement] = useState<number>(65);
+
+  // Record Editing State
+  const [editAttendance, setEditAttendance] = useState<number>(80);
+  const [editQuiz, setEditQuiz] = useState<number>(75);
+  const [editAssignment, setEditAssignment] = useState<number>(78);
+  const [editLate, setEditLate] = useState<number>(0);
+  const [savingRecord, setSavingRecord] = useState(false);
+  const [recordSavedMsg, setRecordSavedMsg] = useState(false);
 
   // AI Explain local state
   const [selectedQuestion, setSelectedQuestion] = useState<
@@ -134,6 +145,22 @@ export default function StudentDrillDownModal({
             }`}
           >
             <Sparkles className="w-4 h-4" /> AI Explainability
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("update");
+              setEditAttendance(intel.profile.attendancePercent || 0);
+              setEditQuiz(intel.profile.quizAverage || 0);
+              setEditAssignment(intel.profile.assignmentAverage || 0);
+              setEditLate(intel.profile.lateSubmissions || 0);
+            }}
+            className={`py-3 border-b-2 flex items-center gap-2 transition ${
+              activeTab === "update"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Sliders className="w-4 h-4" /> Update Records
           </button>
         </div>
 
@@ -601,12 +628,130 @@ export default function StudentDrillDownModal({
             </div>
           )}
 
+          {/* TAB 5: UPDATE ACADEMIC & ATTENDANCE RECORDS */}
+          {activeTab === "update" && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xs space-y-5">
+                <div>
+                  <h3 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">
+                    Update Student Performance & Attendance
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Faculty & Admin authority: Modify verified attendance, quiz grade averages, and assignments. All changes persist to Supabase and immediately recalculate heuristic risk scores.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                      Attendance Percentage (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editAttendance}
+                      onChange={(e) => setEditAttendance(Number(e.target.value))}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-800 dark:text-slate-100 outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-1">College Debarment line is 75%</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                      Quiz Average (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editQuiz}
+                      onChange={(e) => setEditQuiz(Number(e.target.value))}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-800 dark:text-slate-100 outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-1">Passing threshold is 60%</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                      Assignment Average (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editAssignment}
+                      onChange={(e) => setEditAssignment(Number(e.target.value))}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-800 dark:text-slate-100 outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-1">Coursework assessment score</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                      Late Submissions Count
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editLate}
+                      onChange={(e) => setEditLate(Number(e.target.value))}
+                      className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-800 dark:text-slate-100 outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-1">Behavior punctuality factor</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    disabled={savingRecord}
+                    onClick={async () => {
+                      setSavingRecord(true);
+                      try {
+                        await updateStudent(studentId, {
+                          attendancePercent: editAttendance,
+                          quizAverage: editQuiz,
+                          assignmentAverage: editAssignment,
+                          lateSubmissions: editLate,
+                        });
+                        syncStudentAnalytics({
+                          id: studentId,
+                          attendancePercent: editAttendance,
+                          quizAverage: editQuiz,
+                          assignmentAverage: editAssignment,
+                          lateSubmissions: editLate,
+                        });
+                        setRecordSavedMsg(true);
+                        setTimeout(() => setRecordSavedMsg(false), 3500);
+                      } catch (err) {
+                        console.error("Failed to update student:", err);
+                      } finally {
+                        setSavingRecord(false);
+                      }
+                    }}
+                    className="w-full btn-primary py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    {savingRecord ? "Saving to Database..." : "Save Updates & Recalculate Risk"}
+                  </button>
+
+                  {recordSavedMsg && (
+                    <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold text-center flex items-center justify-center gap-1.5 animate-fadeIn">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      Academic & attendance records updated in Supabase successfully!
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* MODAL FOOTER */}
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center">
           <div className="text-xs text-slate-400 font-medium">
-            Student Analytics Profile • CampusOS AI Layer
+            Student Analytics Profile • ARIVON AI Layer
           </div>
           <div className="flex gap-2">
             {onCreateIntervention && (

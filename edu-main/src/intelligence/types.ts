@@ -367,3 +367,86 @@ export interface StudentSegmentationResult {
   badgeColor: string;
 }
 
+// -------------------------------------------------------------
+// 7 OFFICIAL HACKATHON DATA CATEGORIES & INTEGRATION STATUS
+// -------------------------------------------------------------
+
+export interface AcademicRecordData {
+  cgpa: number;
+  semesterGpa: number;
+  quizAverage: number;
+  assignmentAverage: number;
+  examsAverage: number;
+  backlogsCount: number;
+  subjectWiseMarks: Array<{ subject: string; marks: number; maxMarks: number; grade: string }>;
+  trend: "improving" | "stable" | "declining";
+}
+
+export interface AttendanceRecordData {
+  overallPercentage: number;
+  subjectWiseAttendance: Array<{ subject: string; attendedHours: number; totalHours: number; percentage: number }>;
+  shortageAgainstThreshold: number;
+  trend: "improving" | "stable" | "declining";
+}
+
+export interface LMSActivityData {
+  loginFrequencyPerWeek: number;
+  totalLogins: number;
+  assignmentCompletionRate: number;
+  assignmentsSubmitted: number;
+  totalAssignments: number;
+  activeDaysLast30: number;
+  courseProgressPercent: number;
+}
+
+export interface StudentEngagementData {
+  eventsAttendedCount: number;
+  clubParticipationsCount: number;
+  hackathonsCount: number;
+  certificationsCount: number;
+  extracurricularPoints: number;
+}
+
+export interface PlacementReadinessData {
+  aptitudeScore: number | null;
+  codingScore: number | null;
+  mockInterviewScore: number | null;
+  resumeVerified: boolean;
+  preparationProgressPercent: number;
+  status: "Placement-Ready" | "Preparation Needed" | "Not Started";
+}
+
+export interface SkillsAssessmentData {
+  technicalSkills: Array<{ name: string; rating: number; verified: boolean }>;
+  softSkills: Array<{ name: string; rating: number }>;
+  assessmentsPassedCount: number;
+  verifiedRatingsCount: number;
+}
+
+export interface StudentFeedbackData {
+  satisfactionRating: number;
+  facultyFeedbackNotes: string;
+  supportInterventionFeedback: string;
+  lastFeedbackDate: string;
+}
+
+export interface DataCategoryStatus {
+  id: string;
+  categoryName: string;
+  status: "Connected" | "Partial" | "Demo Data" | "Disconnected";
+  recordCount: number;
+  lastUpdated: string;
+  missingFields: string[];
+  healthScore: number;
+  description: string;
+}
+
+export interface DataIntegrationOverview {
+  overallHealthScore: number;
+  connectedCategoriesCount: number;
+  totalCategoriesCount: number;
+  totalRecordsIngested: number;
+  categories: DataCategoryStatus[];
+  lastSyncTime: string;
+}
+

@@ -540,10 +540,14 @@ export async function fetchSupportTicketsFromDB(): Promise<SupportTicket[] | nul
     return data.map((row: any) => ({
       id: row.id,
       creatorId: row.creator_id,
+      creatorName: row.creator_name,
+      subject: row.subject,
       category: row.category,
       description: row.description,
       status: row.status,
+      adminResponse: row.admin_response,
       createdAt: row.created_at,
+      updatedAt: row.updated_at,
       attachments: row.attachments || []
     }));
   } catch (err) {
@@ -555,7 +559,7 @@ export async function fetchSupportTicketsFromDB(): Promise<SupportTicket[] | nul
 export async function saveSupportTicketToDB(ticket: SupportTicket): Promise<void> {
   if (!isSupabaseConfigured()) return;
   try {
-    const { error } = await supabase.from("support_tickets").upsert({
+    const payload: any = {
       id: ticket.id,
       creator_id: ticket.creatorId,
       category: ticket.category,
@@ -563,7 +567,12 @@ export async function saveSupportTicketToDB(ticket: SupportTicket): Promise<void
       status: ticket.status,
       attachments: ticket.attachments || [],
       created_at: ticket.createdAt
-    });
+    };
+    if (ticket.subject) payload.subject = ticket.subject;
+    if (ticket.adminResponse) payload.admin_response = ticket.adminResponse;
+    if (ticket.updatedAt) payload.updated_at = ticket.updatedAt;
+
+    const { error } = await supabase.from("support_tickets").upsert(payload);
     if (error) console.error("saveSupportTicketToDB error:", error.message);
   } catch (err) {
     console.error("Failed to save support ticket to Supabase:", err);
@@ -703,6 +712,7 @@ export interface UserProgressRecord {
   progressPercentage: number;
   xpEarned: number;
   score?: number;
+  total?: number;
   metadata?: Record<string, any>;
   completedAt?: string;
   createdAt?: string;
@@ -1714,4 +1724,384 @@ export async function deleteInterventionInDB(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// ============================================================================
+// 16. NOTIFICATIONS (ROLE-BASED & RECIPIENT-ISOLATED)
+// ============================================================================
+
+export interface CampusNotificationRecord {
+  id: string;
+  recipientId: string;
+  role?: string;
+  title: string;
+  message: string;
+  time?: string;
+  type: "quiz" | "recovery" | "resource" | "mission" | "intervention" | "feedback" | "system" | "admin";
+  read: boolean;
+  link?: string;
+  metadata?: Record<string, any>;
+  createdAt?: string;
+}
+
+export async function fetchNotificationsFromDB(userId: string): Promise<CampusNotificationRecord[] | null> {
+  if (!userId) return null;
+  const localKey = `campus_notifications_${userId}`;
+  let localList: CampusNotificationRecord[] = [];
+  try {
+    const raw = localStorage.getItem(localKey);
+    if (raw) localList = JSON.parse(raw);
+  } catch (e) {}
+
+  if (!isSupabaseConfigured()) return localList;
+
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("recipient_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      // If table missing in schema cache or query error, return local cache
+      return localList;
+    }
+
+    if (data && data.length > 0) {
+      const mapped: CampusNotificationRecord[] = data.map((d: any) => ({
+        id: d.id,
+        recipientId: d.recipient_id,
+        role: d.role,
+        title: d.title,
+        message: d.message,
+        type: d.type || "system",
+        read: Boolean(d.read),
+        link: d.link || undefined,
+        metadata: d.metadata || {},
+        createdAt: d.created_at,
+        time: d.created_at ? formatRelativeTime(d.created_at) : "Just now"
+      }));
+      try {
+        localStorage.setItem(localKey, JSON.stringify(mapped));
+      } catch (e) {}
+      return mapped;
+    }
+
+    return localList;
+  } catch (err) {
+    console.warn("fetchNotificationsFromDB warning:", err);
+    return localList;
+  }
+}
+
+export async function saveNotificationToDB(notif: CampusNotificationRecord): Promise<boolean> {
+  if (!notif.recipientId) return false;
+  const localKey = `campus_notifications_${notif.recipientId}`;
+
+  try {
+    const raw = localStorage.getItem(localKey);
+    const list: CampusNotificationRecord[] = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex(n => n.id === notif.id);
+    if (idx >= 0) {
+      list[idx] = notif;
+    } else {
+      list.unshift(notif);
+    }
+    localStorage.setItem(localKey, JSON.stringify(list));
+  } catch (e) {}
+
+  if (!isSupabaseConfigured()) return true;
+
+  try {
+    const { error } = await supabase.from("notifications").upsert({
+      id: notif.id,
+      recipient_id: notif.recipientId,
+      role: notif.role || "student",
+      title: notif.title,
+      message: notif.message,
+      type: notif.type,
+      read: notif.read,
+      link: notif.link || null,
+      metadata: notif.metadata || {}
+    });
+    if (error) {
+      console.warn("saveNotificationToDB error (handled):", error.message);
+    }
+    return true;
+  } catch (err) {
+    console.warn("saveNotificationToDB exception (handled):", err);
+    return false;
+  }
+}
+
+export async function markNotificationAsReadInDB(notifId: string, userId?: string): Promise<boolean> {
+  if (userId) {
+    const localKey = `campus_notifications_${userId}`;
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) {
+        const list: CampusNotificationRecord[] = JSON.parse(raw);
+        const updated = list.map(n => n.id === notifId ? { ...n, read: true } : n);
+        localStorage.setItem(localKey, JSON.stringify(updated));
+      }
+    } catch (e) {}
+  }
+
+  if (!isSupabaseConfigured()) return true;
+
+  try {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", notifId);
+    if (error) console.warn("markNotificationAsReadInDB error:", error.message);
+    return true;
+  } catch (err) {
+    console.warn("markNotificationAsReadInDB exception:", err);
+    return false;
+  }
+}
+
+export async function markAllNotificationsAsReadInDB(userId: string): Promise<boolean> {
+  if (!userId) return false;
+  const localKey = `campus_notifications_${userId}`;
+  try {
+    const raw = localStorage.getItem(localKey);
+    if (raw) {
+      const list: CampusNotificationRecord[] = JSON.parse(raw);
+      const updated = list.map(n => ({ ...n, read: true }));
+      localStorage.setItem(localKey, JSON.stringify(updated));
+    }
+  } catch (e) {}
+
+  if (!isSupabaseConfigured()) return true;
+
+  try {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("recipient_id", userId);
+    if (error) console.warn("markAllNotificationsAsReadInDB error:", error.message);
+    return true;
+  } catch (err) {
+    console.warn("markAllNotificationsAsReadInDB exception:", err);
+    return false;
+  }
+}
+
+export async function deleteNotificationFromDB(notifId: string, userId?: string): Promise<boolean> {
+  if (userId) {
+    const localKey = `campus_notifications_${userId}`;
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) {
+        const list: CampusNotificationRecord[] = JSON.parse(raw);
+        const updated = list.filter(n => n.id !== notifId);
+        localStorage.setItem(localKey, JSON.stringify(updated));
+      }
+    } catch (e) {}
+  }
+
+  if (!isSupabaseConfigured()) return true;
+
+  try {
+    const { error } = await supabase.from("notifications").delete().eq("id", notifId);
+    if (error) console.warn("deleteNotificationFromDB error:", error.message);
+    return true;
+  } catch (err) {
+    console.warn("deleteNotificationFromDB exception:", err);
+    return false;
+  }
+}
+
+// ============================================================================
+// 17. QUIZ ATTEMPTS & ARENA PERSISTENCE
+// ============================================================================
+
+export interface QuizAttemptRecord {
+  id?: string;
+  studentId: string;
+  topicId: string;
+  topicTitle: string;
+  score: number;
+  totalQuestions: number;
+  xpEarned: number;
+  accuracy: number;
+  createdAt?: string;
+}
+
+export async function saveQuizAttemptToDB(attempt: QuizAttemptRecord): Promise<void> {
+  if (!attempt.studentId) return;
+  const localKey = `edu_quiz_attempts_${attempt.studentId}`;
+  try {
+    const raw = localStorage.getItem(localKey);
+    const list: QuizAttemptRecord[] = raw ? JSON.parse(raw) : [];
+    list.unshift({ ...attempt, createdAt: attempt.createdAt || new Date().toISOString() });
+    localStorage.setItem(localKey, JSON.stringify(list.slice(0, 50)));
+  } catch (e) {}
+
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    await supabase.from("quiz_attempts").insert({
+      id: attempt.id || `qa_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      student_id: attempt.studentId,
+      topic_id: attempt.topicId,
+      topic_title: attempt.topicTitle,
+      score: attempt.score,
+      total_questions: attempt.totalQuestions,
+      xp_earned: attempt.xpEarned,
+      accuracy: attempt.accuracy,
+      created_at: attempt.createdAt || new Date().toISOString()
+    });
+  } catch (err) {
+    console.warn("saveQuizAttemptToDB handled:", err);
+  }
+}
+
+export async function fetchQuizAttemptsFromDB(studentId: string): Promise<QuizAttemptRecord[]> {
+  if (!studentId) return [];
+  const localKey = `edu_quiz_attempts_${studentId}`;
+  let localList: QuizAttemptRecord[] = [];
+  try {
+    const raw = localStorage.getItem(localKey);
+    if (raw) localList = JSON.parse(raw);
+  } catch (e) {}
+
+  if (!isSupabaseConfigured()) return localList;
+
+  try {
+    const { data, error } = await supabase
+      .from("quiz_attempts")
+      .select("*")
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) return localList;
+
+    return data.map((d: any) => ({
+      id: d.id,
+      studentId: d.student_id,
+      topicId: d.topic_id,
+      topicTitle: d.topic_title,
+      score: Number(d.score),
+      totalQuestions: Number(d.total_questions),
+      xpEarned: Number(d.xp_earned),
+      accuracy: Number(d.accuracy),
+      createdAt: d.created_at
+    }));
+  } catch (err) {
+    console.warn("fetchQuizAttemptsFromDB handled:", err);
+    return localList;
+  }
+}
+
+// ============================================================================
+// 18. MULTI-USER PROVISIONING HELPER
+// ============================================================================
+
+export interface UserProvisioningData {
+  id: string;
+  email: string;
+  name: string;
+  role: "student" | "faculty" | "admin";
+  department?: string;
+  course?: string;
+  year?: string;
+  registrationNumber?: string;
+  designation?: string;
+  institution?: string;
+  status?: "active" | "pending_approval" | "suspended";
+}
+
+export async function provisionNewUserRecordsInDB(data: UserProvisioningData): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true;
+
+  try {
+    // 1. Insert/Update base profile (Schema-resilient: attempts full columns, falls back to base columns)
+    const baseProfile = {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      department: data.department || "Computer Science"
+    };
+
+    const { error: pErr } = await supabase.from("profiles").upsert({
+      ...baseProfile,
+      status: data.status || (data.role === "student" ? "active" : "pending_approval"),
+      registration_number: data.registrationNumber || null,
+      designation: data.designation || null,
+      institution: data.institution || "Campus Institute of Technology"
+    });
+
+    if (pErr) {
+      await supabase.from("profiles").upsert(baseProfile);
+    }
+
+    // 2. If student, provision fresh zero-baseline student & learning profile
+    if (data.role === "student") {
+      await supabase.from("students").upsert({
+        id: data.id,
+        course: data.course || "B.Tech Computer Science",
+        year: data.year || "1st Year",
+        attendance_percent: 0,
+        quiz_average: 0,
+        assignment_average: 0,
+        late_submissions: 0,
+        total_assignments: 0,
+        gpa: 0,
+        journey_type: "onboarding",
+        weak_topics: []
+      });
+
+      await supabase.from("learning_profiles").upsert({
+        student_id: data.id,
+        level: 1,
+        total_xp: 0,
+        arena_coins: 0,
+        streak: 0,
+        longest_streak: 0,
+        completed_quests: 0,
+        quiz_accuracy: 0,
+        quizzes_completed: 0,
+        title: "Fresh Explorer",
+        current_focus: "General"
+      });
+
+      // Welcome Notification
+      await saveNotificationToDB({
+        id: `notif_welcome_${data.id}`,
+        recipientId: data.id,
+        role: "student",
+        title: "Welcome to ARIVON AI!",
+        message: "Your personalized learning space is activated. Head over to the Learning Arena to complete your first topic mission!",
+        type: "system",
+        read: false,
+        link: "/learning-arena"
+      });
+    }
+
+    return true;
+  } catch (err) {
+    console.warn("provisionNewUserRecordsInDB handled:", err);
+    return false;
+  }
+}
+
+function formatRelativeTime(dateStr: string): string {
+  try {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour}h ago`;
+    const diffDays = Math.floor(diffHour / 24);
+    return `${diffDays}d ago`;
+  } catch {
+    return "Recently";
+  }
+}
+
 

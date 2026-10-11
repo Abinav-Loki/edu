@@ -356,7 +356,7 @@ function libraryItemToSelectedResource(item: LibraryItem): SelectedResource {
     type: item.type,
     size: item.size,
     date: item.date,
-    description: item.description || "Study material available in CampusOS Digital Library.",
+    description: item.description || "Study material available in ARIVON AI Digital Library.",
     uploadedBy: item.uploadedBy || "Faculty Uploader"
   };
 }
@@ -407,7 +407,7 @@ export default function LibraryPage() {
         day: "numeric",
         year: "numeric"
       }),
-      description: m.description || "Uploaded by student into CampusOS storage.",
+      description: m.description || "Uploaded by student into ARIVON AI storage.",
       uploadedBy: m.uploadedBy || "Student Upload"
     };
   });
@@ -528,7 +528,7 @@ export default function LibraryPage() {
         <PageHeader
           title="Digital Library"
           subtitle="Access curated lecture notes, YouTube video lectures, and previous examination papers"
-          badge="CampusOS Repository"
+          badge="ARIVON AI Repository"
         />
 
         {/* Search Bar & Category Controls Header */}

@@ -320,6 +320,24 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
+.nav-link.nav-link-collapsed {
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+  min-height: 2.75rem !important;
+  padding: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: none !important;
+}
+
+.nav-link.nav-link-collapsed:hover {
+  transform: scale(1.08) !important;
+  filter: brightness(1.15) !important;
+}
+
 /* Badge pill */
 .badge-high {
   background: rgba(248, 113, 113, 0.12);
@@ -533,12 +551,92 @@
   border-color: rgba(255, 255, 255, 0.15);
 }
 
+/* Secondary Button in Dark Mode */
+.dark .btn-secondary {
+  background: rgba(30, 41, 59, 0.85);
+  color: #38BDF8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.dark .btn-secondary:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #7DD3FC;
+}
+
+/* Quiz Option in Dark Mode */
+.dark .quiz-option {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
+
+.dark .quiz-option:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.dark .quiz-option.selected {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22C55E;
+}
+
+.dark .quiz-option .option-label {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38BDF8;
+}
+
+/* Bottom Nav in Dark Mode */
+.dark .bottom-nav {
+  background: rgba(15, 23, 42, 0.92);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .bottom-nav-item {
+  color: #64748b;
+}
+
+.dark .bottom-nav-item:hover {
+  color: #cbd5e1;
+}
+
+.dark .bottom-nav-item.active {
+  color: #38BDF8;
+}
+
+/* Table Contrast in Dark Mode */
+.dark table th {
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark table td {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark tr:hover td {
+  background-color: rgba(30, 41, 59, 0.4) !important;
+}
+
+/* Inputs & Form Controls */
 .dark input[type="text"],
 .dark input[type="search"],
 .dark input[type="password"],
 .dark input[type="email"],
 .dark select,
 .dark textarea {
+  color: #f8fafc;
+  background-color: rgba(30, 41, 59, 0.65);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+.dark select option {
+  background-color: #1e293b;
   color: #f8fafc;
 }
 

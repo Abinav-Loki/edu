@@ -18,7 +18,9 @@ import FacultyAvailability from "./pages/faculty/FacultyAvailability";
 import FacultyStudents from "./pages/faculty/FacultyStudents";
 import FacultyMentorRequests from "./pages/faculty/FacultyMentorRequests";
 import AdminDashboard from "./pages/AdminDashboard";
-import AssetScanner from "./pages/AssetScanner";
+import AdminDataIntegrationPage from "./pages/admin/AdminDataIntegrationPage";
+import AdminAtRiskPage from "./pages/admin/AdminAtRiskPage";
+import AdminSegmentationPage from "./pages/admin/AdminSegmentationPage";
 import SupportPage from "./pages/SupportPage";
 import UploadMaterialsPage from "./pages/UploadMaterialsPage";
 import LibraryPage from "./pages/LibraryPage";
@@ -26,19 +28,11 @@ import StudyPlannerPage from "./pages/StudyPlannerPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import LearningArenaPage from "./pages/LearningArenaPage";
+import ShopPage from "./pages/ShopPage";
 import { LearningProvider } from "./context/LearningContext";
 import { SidebarProvider } from "./context/SidebarContext";
 import LandingPage from "./pages/landing/LandingPage";
-
-function PublicLanding() {
-  const { activeRole, currentUser } = useCampus();
-  if (currentUser) {
-    if (activeRole === "faculty") return <Navigate to="/faculty" replace />;
-    if (activeRole === "admin") return <Navigate to="/admin" replace />;
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <LandingPage />;
-}
+import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
   return (
@@ -49,9 +43,11 @@ export default function App() {
             <SidebarProvider>
               <Routes>
               {/* Public Pre-Auth Route */}
-              <Route path="/" element={<PublicLanding />} />
+              <Route path="/" element={<LandingPage />} />
 
               {/* Public Login & Signup Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<LoginPage />} />
               <Route path="/student/login" element={<LoginPage />} />
               <Route path="/student/signup" element={<LoginPage />} />
               <Route path="/faculty/login" element={<LoginPage />} />
@@ -59,14 +55,15 @@ export default function App() {
               <Route path="/admin/login" element={<LoginPage />} />
 
               {/* Protected Main Routes */}
-              <Route element={<MainLayout />}>
+              <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
                 {/* Shared Profile */}
-                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
                 {/* Student Routes */}
                 <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["student"]}><HomePage /></ProtectedRoute>} />
                 <Route path="/tutor" element={<ProtectedRoute allowedRoles={["student"]}><TutorPage /></ProtectedRoute>} />
                 <Route path="/learning-arena" element={<ProtectedRoute allowedRoles={["student"]}><LearningArenaPage /></ProtectedRoute>} />
+                <Route path="/shop" element={<ProtectedRoute allowedRoles={["student"]}><ShopPage /></ProtectedRoute>} />
                 <Route path="/study-planner" element={<ProtectedRoute allowedRoles={["student"]}><StudyPlannerPage /></ProtectedRoute>} />
                 <Route path="/recovery-plan" element={<ProtectedRoute allowedRoles={["student"]}><RecoveryPlanPage /></ProtectedRoute>} />
                 <Route path="/quiz" element={<ProtectedRoute allowedRoles={["student"]}><QuizPage /></ProtectedRoute>} />
@@ -81,20 +78,22 @@ export default function App() {
                 {/* Shared Tickets (Student & Admin can view/edit in this demo setup for simplicity) */}
                 <Route path="/support" element={<ProtectedRoute allowedRoles={["student", "admin"]}><SupportPage /></ProtectedRoute>} />
 
-                {/* Faculty Routes */}
-                <Route path="/faculty" element={<ProtectedRoute allowedRoles={["faculty"]}><FacultyDashboard /></ProtectedRoute>} />
-                <Route path="/faculty/timetable" element={<ProtectedRoute allowedRoles={["faculty"]}><FacultyTimetable /></ProtectedRoute>} />
-                <Route path="/faculty/availability" element={<ProtectedRoute allowedRoles={["faculty"]}><FacultyAvailability /></ProtectedRoute>} />
-                <Route path="/faculty/students" element={<ProtectedRoute allowedRoles={["faculty"]}><FacultyStudents /></ProtectedRoute>} />
-                <Route path="/faculty/requests" element={<ProtectedRoute allowedRoles={["faculty"]}><FacultyMentorRequests /></ProtectedRoute>} />
+                {/* Faculty Routes (Accessible to Faculty & Campus Administrators) */}
+                <Route path="/faculty" element={<ProtectedRoute allowedRoles={["faculty", "admin"]}><FacultyDashboard /></ProtectedRoute>} />
+                <Route path="/faculty/timetable" element={<ProtectedRoute allowedRoles={["faculty", "admin"]}><FacultyTimetable /></ProtectedRoute>} />
+                <Route path="/faculty/availability" element={<ProtectedRoute allowedRoles={["faculty", "admin"]}><FacultyAvailability /></ProtectedRoute>} />
+                <Route path="/faculty/students" element={<ProtectedRoute allowedRoles={["faculty", "admin"]}><FacultyStudents /></ProtectedRoute>} />
+                <Route path="/faculty/requests" element={<ProtectedRoute allowedRoles={["faculty", "admin"]}><FacultyMentorRequests /></ProtectedRoute>} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/admin/assets" element={<ProtectedRoute allowedRoles={["admin"]}><AssetScanner /></ProtectedRoute>} />
-                
-                {/* Fallback for unknown routes */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="/admin/data-integration" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDataIntegrationPage /></ProtectedRoute>} />
+                <Route path="/admin/at-risk" element={<ProtectedRoute allowedRoles={["admin"]}><AdminAtRiskPage /></ProtectedRoute>} />
+                <Route path="/admin/segmentation" element={<ProtectedRoute allowedRoles={["admin"]}><AdminSegmentationPage /></ProtectedRoute>} />
               </Route>
+
+              {/* 404 Not Found for any unmatched route */}
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
             </SidebarProvider>
           </BrowserRouter>

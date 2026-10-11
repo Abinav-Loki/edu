@@ -67,11 +67,11 @@ export default function SolutionSection() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center shadow-xl shadow-indigo-500/30 mb-6">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
-              CAMPUSOS AI
+            <h2 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">
+              ARIVON AI
             </h2>
-            <p className="text-xl text-indigo-600 font-bold mt-2">
-              The Intelligent Operating Layer for a Modern Campus
+            <p className="text-xl text-indigo-600 dark:text-indigo-400 font-bold mt-2">
+              The Intelligent Students Analytics Layer for a Modern Campus
             </p>
           </div>
         </div>

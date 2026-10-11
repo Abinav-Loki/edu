@@ -76,14 +76,16 @@ export default function TopicDetailPanel({
 
           <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 text-center">
             <Star className="w-5 h-5 text-amber-500 fill-amber-500 mx-auto mb-1" />
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase block">Reward</span>
-            <span className="text-xs font-extrabold text-amber-700 dark:text-amber-300">+{topic.xp} XP</span>
+            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase block">Max Reward</span>
+            <span className="text-xs font-extrabold text-amber-700 dark:text-amber-300">+{topic.xp || 100} EXP</span>
           </div>
 
           <div className="p-3 rounded-2xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 text-center">
             <Award className="w-5 h-5 text-purple-500 mx-auto mb-1" />
-            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase block">Missions</span>
-            <span className="text-xs font-bold text-purple-700 dark:text-purple-300">{topic.missions.length} Quiz</span>
+            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase block">Arena Quiz</span>
+            <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+              {topic.missions[0]?.questions?.length || 5} Questions
+            </span>
           </div>
         </div>
 
@@ -91,10 +93,10 @@ export default function TopicDetailPanel({
         {topic.missions.length > 0 && (
           <div className="mb-6 p-4 rounded-2xl bg-sky-50/80 dark:bg-slate-800/60 border border-sky-100 dark:border-slate-700">
             <h4 className="text-xs font-bold text-sky-800 dark:text-sky-300 uppercase tracking-wide mb-1">
-              Active Mission Goal:
+              Active Quiz Goal:
             </h4>
             <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-              {topic.missions[0].description} ({topic.missions[0].questions.length} questions)
+              {topic.missions[0].description} ({topic.missions[0].questions.length} questions • +20 EXP for correct, +0 for wrong)
             </p>
           </div>
         )}

@@ -135,11 +135,11 @@ export default function FacultyDashboard() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <PageHeader
-            title="Smart Campus Analytics Hub"
-            subtitle={`AI-Powered Cohort Intelligence & Student Success • Welcome, Professor ${
+            title="ARIVON AI Faculty Console"
+            subtitle={`Students Analytics • AI-Powered Cohort Intelligence & Academic Mentoring • Welcome, Professor ${
               currentUser?.name.split(" ")[0] || "User"
             }`}
-            badge="Hackathon 2026 Edition"
+            badge="Faculty Analytics"
           />
 
           <div className="flex items-center gap-2">
