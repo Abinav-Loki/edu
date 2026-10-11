@@ -48,7 +48,7 @@ export default function InterventionModal({
   const [interventions, setInterventions] = useState<StudentInterventionItem[]>(() =>
     getStoredInterventions()
   );
-  const [isCreating, setIsCreating] = useState<boolean>(!!preselectedStudentId);
+  const [isCreating, setIsCreating] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
@@ -57,6 +57,8 @@ export default function InterventionModal({
   // Create Form State
   const [formStudentId, setFormStudentId] = useState<string>(preselectedStudentId || students[0]?.id || "s1");
   const [formCategory, setFormCategory] = useState<typeof CATEGORIES[number]>("Academic Mentoring");
+  const [formSubject, setFormSubject] = useState<string>("");
+  const [formPriority, setFormPriority] = useState<"High" | "Medium" | "Low">("Medium");
   const [formRecommendation, setFormRecommendation] = useState<string>("");
   const [formNotes, setFormNotes] = useState<string>("");
   const [formFaculty, setFormFaculty] = useState<string>("Prof. Rahul Kumar");
@@ -71,6 +73,7 @@ export default function InterventionModal({
   if (!isOpen) return null;
 
   const filteredInterventions = interventions.filter((item) => {
+    if (preselectedStudentId && item.studentId !== preselectedStudentId) return false;
     if (statusFilter === "all") return true;
     return item.status.toLowerCase() === statusFilter.toLowerCase();
   });
@@ -85,6 +88,8 @@ export default function InterventionModal({
       studentId: formStudentId,
       studentName: targetStudent?.name || "Student",
       category: formCategory,
+      subject: formSubject || `${formCategory} Request`,
+      priority: formPriority,
       recommendation: formRecommendation || `${formCategory} session scheduled`,
       notes: formNotes || "Scheduled via Faculty Analytics Hub",
       assignedFaculty: formFaculty,
@@ -107,6 +112,8 @@ export default function InterventionModal({
     setTimeout(() => setSaveSuccessMsg(null), 3000);
 
     setIsCreating(false);
+    setFormSubject("");
+    setFormPriority("Medium");
     setFormRecommendation("");
     setFormNotes("");
     if (onInterventionsChanged) onInterventionsChanged();
@@ -261,6 +268,37 @@ export default function InterventionModal({
                   </select>
                 </div>
 
+                {/* Priority */}
+                <div>
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                    Priority Level
+                  </label>
+                  <select
+                    value={formPriority}
+                    onChange={(e) => setFormPriority(e.target.value as any)}
+                    className="w-full text-xs font-medium p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="High">High Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="Low">Low Priority</option>
+                  </select>
+                </div>
+                
+                {/* Subject / Title */}
+                <div>
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
+                    Subject / Title
+                  </label>
+                  <input
+                    type="text"
+                    value={formSubject}
+                    onChange={(e) => setFormSubject(e.target.value)}
+                    className="w-full text-xs font-medium p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                    placeholder="Brief subject of the support action"
+                    required
+                  />
+                </div>
+
                 {/* Assigned Faculty */}
                 <div>
                   <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1">
@@ -400,13 +438,31 @@ export default function InterventionModal({
                       </div>
                     </div>
 
-                    <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                      Category: {item.category}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1">
+                          {item.category}
+                        </div>
+                        <h5 className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-2">
+                          {item.subject || `${item.category} Request`}
+                        </h5>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
+                          <span className="font-bold">Recommendation:</span> {item.recommendation}
+                        </p>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-2 text-xs">
+                        {item.priority && (
+                          <span className={`px-2 py-0.5 rounded-md font-bold ${
+                            item.priority === "High" ? "bg-rose-100 text-rose-700" :
+                            item.priority === "Medium" ? "bg-amber-100 text-amber-700" :
+                            "bg-blue-100 text-blue-700"
+                          }`}>
+                            {item.priority} Priority
+                          </span>
+                        )}
+                      </div>
                     </div>
-
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Recommendation: <span className="font-medium text-slate-600 dark:text-slate-300">{item.recommendation}</span>
-                    </p>
 
                     {item.notes && (
                       <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">

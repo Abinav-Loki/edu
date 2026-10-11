@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useCampus } from "../context/CampusContext";
 import { useSettings } from "../context/SettingsContext";
+import { useLearning } from "../context/LearningContext";
+import { getFrameById } from "../data/avatarFramesData";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
@@ -107,6 +109,8 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
 export default function SettingsPage() {
   const { currentUser, updateProfile } = useCampus();
   const { settings, updateSettings, playSound } = useSettings();
+  const { profile } = useLearning();
+  const equippedFrame = getFrameById(profile?.frameId);
   
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
@@ -191,8 +195,13 @@ export default function SettingsPage() {
         {/* Profile card */}
         <GlassCard className="mb-5">
           <div className="flex items-start sm:items-center flex-col sm:flex-row gap-4">
-            <div className="w-14 h-14 rounded-2xl primary-gradient flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-lg">
-              {currentUser.name.split(" ").map((n) => n[0]).join("").substring(0,2)}
+            <div className="relative shrink-0">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-black transition-all ${equippedFrame.ringClasses} ${equippedFrame.avatarBg}`}>
+                {currentUser.name.split(" ").map((n) => n[0]).join("").substring(0,2)}
+              </div>
+              <div className="absolute -bottom-1.5 -right-1.5 text-base bg-white dark:bg-slate-800 rounded-full p-0.5 shadow-md border border-slate-200 dark:border-slate-700 select-none">
+                {equippedFrame.emoji}
+              </div>
             </div>
             
             <div className="flex-1 w-full min-w-0">
@@ -235,12 +244,16 @@ export default function SettingsPage() {
                     {currentUser.department || "No department specified"} 
                     {currentUser.role === 'student' && (currentUser as any).year ? ` • ${(currentUser as any).year}` : ''}
                   </p>
-                  <div className="flex gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     <span className="inline-block text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 rounded-full px-2 py-0.5">
                       {currentUser.role} Account
                     </span>
                     <span className="inline-block text-[10px] uppercase font-bold text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-full px-2 py-0.5">
                       ID: {currentUser.id}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-full px-2.5 py-0.5">
+                      <span>{equippedFrame.emoji}</span>
+                      <span>Frame: {equippedFrame.name}</span>
                     </span>
                   </div>
                 </>
@@ -367,7 +380,7 @@ export default function SettingsPage() {
         </GlassCard>
 
         <p className="text-center text-xs text-slate-400 mt-6 pb-4">
-          CampusOS AI v2.0 · Settings synchronized
+          ARIVON AI v2.0 · Students Analytics · Settings synchronized
         </p>
       </div>
 

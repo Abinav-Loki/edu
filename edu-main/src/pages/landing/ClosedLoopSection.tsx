@@ -24,7 +24,7 @@ export default function ClosedLoopSection() {
             Intervention isn't the end. It's the next data point.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            Unlike static reporting systems that stop at flagging a problem, CampusOS closes the loop by tracking what happens after an intervention and measuring whether student outcomes actually improved.
+            Unlike static reporting systems that stop at flagging a problem, ARIVON AI closes the loop by tracking what happens after an intervention and measuring whether student outcomes actually improved.
           </p>
         </div>
 

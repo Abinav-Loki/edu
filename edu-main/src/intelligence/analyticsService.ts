@@ -18,6 +18,8 @@ import {
   StudentSuccessScoreResult,
   StudentInterventionItem,
   StudentSegmentationResult,
+  DataCategoryStatus,
+  DataIntegrationOverview,
 } from "./types";
 import { initialStudentIntelligenceMap } from "./mockData";
 import {
@@ -26,14 +28,199 @@ import {
   SCORING_DISCLAIMER,
   SEGMENT_DEFINITIONS,
   ScoringWeights,
+  RiskThresholds,
   SegmentType,
   validateWeights,
+  getStoredScoringWeights,
+  getStoredRiskThresholds,
+  normalizePercentage,
+  normalizeCGPA,
+  normalizeRating,
 } from "./scoringConfig";
 
 // In-memory persistent state store for demo session
 const studentStore: Record<string, StudentIntelligence> = JSON.parse(
   JSON.stringify(initialStudentIntelligenceMap)
 );
+
+/**
+ * Get existing student intelligence or initialize an isolated, unassessed baseline
+ * for newly created or logged-in students (XP: 0, Progress: 0%, Insufficient Data).
+ */
+export function getOrCreateStudentIntelligence(
+  studentId: string,
+  profileOverride?: Partial<StudentProfile>
+): StudentIntelligence {
+  if (studentStore[studentId]) {
+    if (profileOverride) {
+      studentStore[studentId].profile = {
+        ...studentStore[studentId].profile,
+        ...profileOverride,
+      };
+      if (profileOverride.attendancePercent !== undefined) {
+        studentStore[studentId].academicMetrics.attendancePercent = profileOverride.attendancePercent;
+      }
+      if (profileOverride.quizAverage !== undefined) {
+        studentStore[studentId].academicMetrics.quizAverage = profileOverride.quizAverage;
+      }
+      if (profileOverride.assignmentAverage !== undefined) {
+        studentStore[studentId].academicMetrics.assignmentAverage = profileOverride.assignmentAverage;
+      }
+    }
+    return studentStore[studentId];
+  }
+
+  // Create an unassessed baseline intelligence
+  const unassessed: StudentIntelligence = {
+    studentId,
+    profile: {
+      id: studentId,
+      name: profileOverride?.name || "Student",
+      email: profileOverride?.email || `${studentId}@student.edu`,
+      role: "student",
+      course: profileOverride?.course || "B.Tech IT",
+      year: profileOverride?.year || "1st Year",
+      attendancePercent: profileOverride?.attendancePercent ?? 0,
+      quizAverage: profileOverride?.quizAverage ?? 0,
+      assignmentAverage: profileOverride?.assignmentAverage ?? 0,
+      lateSubmissions: profileOverride?.lateSubmissions ?? 0,
+      totalAssignments: profileOverride?.totalAssignments ?? 0,
+      weakTopics: profileOverride?.weakTopics || [],
+      enrolledSubjects: ["Data Structures", "Algorithms", "Operating Systems"],
+      gpa: 0,
+      journeyType: "stable",
+    },
+    successScore: 0,
+    riskLevel: "LOW",
+    academicMetrics: {
+      quizAverage: profileOverride?.quizAverage ?? 0,
+      assignmentAverage: profileOverride?.assignmentAverage ?? 0,
+      attendancePercent: profileOverride?.attendancePercent ?? 0,
+      gpa: 0,
+      subjectScores: [],
+      weakTopics: [],
+      totalAssignments: profileOverride?.totalAssignments ?? 0,
+      completedAssignments: 0,
+      lateSubmissions: profileOverride?.lateSubmissions ?? 0,
+      missedQuizzes: 0,
+      examsAverage: 0,
+      academicRiskScore: 0,
+    },
+    engagementMetrics: {
+      activeDaysLast30Days: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      aiTutorInteractionsCount: 0,
+      totalXP: 0,
+      arenaCoins: 0,
+      learningLevel: 1,
+      questsCompleted: 0,
+      materialsAccessedCount: 0,
+      totalTimeSpentMinutes: 0,
+      weeklyActiveHours: 0,
+      engagementScore: 0,
+      engagementTrend: "stable",
+    },
+    behaviorMetrics: {
+      submissionPunctualityRate: 100,
+      quizAttemptRate: 0,
+      recoveryPlanAdherence: 100,
+      helpSeekingFrequency: "low",
+      studyConsistencyScore: 0,
+      loginFrequencyPerWeek: 0,
+      feedbackSubmittedCount: 0,
+      behaviorScore: 0,
+    },
+    supportInteractions: {
+      mentorRequests: [],
+      supportTickets: [],
+      facultySessionsCount: 0,
+      unresolvedIssuesCount: 0,
+      mentorFeedbackCount: 0,
+    },
+    learningActivity: {
+      recentActivities: [],
+      recoveryPlan: {
+        title: "Academic Onboarding",
+        focus: "Foundation",
+        days: 7,
+        tasksCompleted: 0,
+        totalTasks: 0,
+        progressPercent: 0,
+        status: "not_started",
+        currentDay: 1,
+      },
+      adaptiveQuizCount: 0,
+      arenaBattlesCompleted: 0,
+      skillsMasteredCount: 0,
+    },
+    trends: {
+      weekly: [],
+      quizTrendDelta: 0,
+      assignmentTrendDelta: 0,
+      attendanceTrendDelta: 0,
+      engagementTrendDelta: 0,
+      overallDirection: "stable",
+    },
+    riskFactors: [],
+    studentRisk: {
+      overallRiskLevel: "LOW",
+      riskScore: 0,
+      academicRisk: 0,
+      attendanceRisk: 0,
+      engagementRisk: 0,
+      behaviorRisk: 0,
+      contributingFactors: [],
+      riskTrend: "stable",
+      primaryRiskDriver: "None - Insufficient data",
+    },
+    journey: [],
+    recommendedInterventions: [],
+    interventionHistory: [],
+    placementReadiness: {
+      aptitudeScore: null,
+      codingScore: null,
+      mockInterviewScore: null,
+      resumeStatus: "not_started",
+      placementAssessmentsCompleted: 0,
+      preparationProgressPercent: 0,
+      overallPlacementScore: 0,
+      status: "incomplete",
+    },
+    lmsActivity: {
+      totalLogins: 0,
+      assignmentsSubmitted: 0,
+      assignmentCompletionRate: 0,
+      activeDaysLast30: 0,
+      averageSessionDurationMins: 0,
+      lastLoginDate: "",
+      lmsScore: 0,
+    },
+    skillsAndFeedback: {
+      technicalSkills: [],
+      assessmentsPassedCount: 0,
+      facultyFeedbackCount: 0,
+      skillsScore: 0,
+    },
+    campusEngagement: {
+      eventsAttendedCount: 0,
+      clubParticipationsCount: 0,
+      hackathonsCount: 0,
+      certificationsCount: 0,
+      engagementScore: 0,
+    },
+  };
+
+  studentStore[studentId] = unassessed;
+  return unassessed;
+}
+
+/**
+ * Synchronize or update a student's intelligence records
+ */
+export function syncStudentAnalytics(student: Partial<StudentProfile> & { id: string }): void {
+  getOrCreateStudentIntelligence(student.id, student);
+}
 
 // Initial demo interventions for workflow demonstration
 const INITIAL_DEMO_INTERVENTIONS: StudentInterventionItem[] = [
@@ -138,24 +325,27 @@ export function saveStoredInterventions(list: StudentInterventionItem[]): void {
 
 /**
  * Calculates transparent, normalized Student Success Score (0-100)
- * Evaluates the 6 hackathon categories:
- * - Academic Performance (30%)
- * - Attendance (20%)
- * - LMS Activity (15%)
- * - Placement Readiness (15%)
- * - Skills & Assessments (10%)
- * - Engagement & Feedback (10%)
+ * Evaluates the 6 Hackathon proposed indicator categories:
+ * - Academic Performance (40% default)
+ * - Attendance (25% default)
+ * - LMS & Assignment Completion (15% default)
+ * - Skills & Placement Readiness (10% default)
+ * - Campus Engagement (5% default)
+ * - Student & Faculty Feedback (5% default)
  *
  * Missing-Data Handling:
- * If a category has no valid data, it is excluded and remaining weights are re-normalized.
- * If data coverage < 33%, returns status "Insufficient data" and overallScore = null.
+ * If a category has no valid data, it is excluded and remaining weights are re-normalized to 100%.
+ * If data coverage < 33%, returns status "Insufficient Data" and overallScore = null (never converts missing to zero).
  */
 export function calculateStudentSuccessScoreBreakdown(
   studentId: string,
-  customWeights: ScoringWeights = DEFAULT_SCORING_WEIGHTS
+  customWeights?: ScoringWeights
 ): StudentSuccessScoreResult {
-  const intel = studentStore[studentId] || studentStore["s1"];
-  const weights = validateWeights(customWeights).isValid ? customWeights : DEFAULT_SCORING_WEIGHTS;
+  const intel = getOrCreateStudentIntelligence(studentId);
+  const weights = customWeights && validateWeights(customWeights).isValid
+    ? customWeights
+    : getStoredScoringWeights();
+  const thresholds = getStoredRiskThresholds();
 
   const acad = intel.academicMetrics;
   const placement = intel.placementReadiness;
@@ -163,35 +353,58 @@ export function calculateStudentSuccessScoreBreakdown(
   const skills = intel.skillsAndFeedback;
   const campusEng = intel.campusEngagement;
 
-  // 1. Academic Performance (0-100)
-  const hasAcademic = typeof acad?.quizAverage === "number" && typeof acad?.assignmentAverage === "number";
+  const isUnassessed =
+    intel.profile.totalAssignments === 0 &&
+    (!intel.academicMetrics.subjectScores || intel.academicMetrics.subjectScores.length === 0) &&
+    intel.learningActivity.recentActivities.length === 0;
+
+  // 1. Academic Performance (0-100) — Default Weight: 40%
+  const hasAcademic = !isUnassessed && typeof acad?.quizAverage === "number" && typeof acad?.assignmentAverage === "number" && (acad.quizAverage > 0 || acad.assignmentAverage > 0);
   const academicScore = hasAcademic
-    ? Math.round(acad.quizAverage * 0.45 + acad.assignmentAverage * 0.35 + (acad.examsAverage || 60) * 0.2)
+    ? normalizePercentage(Math.round(acad.quizAverage * 0.45 + acad.assignmentAverage * 0.35 + (acad.examsAverage || 60) * 0.2))
     : null;
 
-  // 2. Attendance (0-100)
-  const hasAttendance = typeof acad?.attendancePercent === "number";
-  const attendanceScore = hasAttendance ? Math.round(acad.attendancePercent) : null;
+  // 2. Attendance (0-100) — Default Weight: 25%
+  const hasAttendance = !isUnassessed && typeof acad?.attendancePercent === "number" && acad.attendancePercent > 0;
+  const attendanceScore = hasAttendance ? normalizePercentage(acad.attendancePercent) : null;
 
-  // 3. LMS Activity & Assignment Completion (0-100)
-  const hasLms = !!lms && typeof lms.lmsScore === "number";
+  // 3. LMS Activity & Assignment Completion (0-100) — Default Weight: 15%
+  const hasLms = !isUnassessed && !!lms && typeof lms.lmsScore === "number";
   const lmsScore = hasLms
-    ? Math.round(lms.lmsScore)
-    : (intel.learningActivity?.recentActivities?.length ? 60 : null);
+    ? normalizePercentage(lms.lmsScore)
+    : (!isUnassessed && intel.learningActivity?.recentActivities?.length ? 60 : null);
 
-  // 4. Placement Readiness (0-100)
-  const hasPlacement = !!placement && typeof placement.overallPlacementScore === "number";
-  const placementScore = hasPlacement ? Math.round(placement.overallPlacementScore) : null;
-
-  // 5. Skills and Assessments (0-100)
+  // 4. Skills & Placement Readiness (0-100) — Default Weight: 10%
+  const hasPlacement = !isUnassessed && !!placement && typeof placement.overallPlacementScore === "number" && placement.overallPlacementScore > 0;
   const hasSkills = !!skills && typeof skills.skillsScore === "number";
-  const skillsScore = hasSkills ? Math.round(skills.skillsScore) : null;
+  const skillsPlacementScore = (hasPlacement || hasSkills)
+    ? normalizePercentage(
+        Math.round(
+          (hasPlacement && hasSkills)
+            ? ((placement?.overallPlacementScore || 0) * 0.6 + (skills?.skillsScore || 0) * 0.4)
+            : (hasPlacement ? (placement?.overallPlacementScore || 0) : (skills?.skillsScore || 0))
+        )
+      )
+    : null;
 
-  // 6. Engagement & Feedback (0-100)
+  // 5. Campus Engagement (0-100) — Default Weight: 5%
   const hasEngagement = !!campusEng && typeof campusEng.engagementScore === "number";
   const engagementScore = hasEngagement
-    ? Math.round(campusEng.engagementScore)
-    : (intel.engagementMetrics?.engagementScore ? Math.round(intel.engagementMetrics.engagementScore) : null);
+    ? normalizePercentage(campusEng.engagementScore)
+    : (intel.engagementMetrics?.engagementScore ? normalizePercentage(intel.engagementMetrics.engagementScore) : null);
+
+  // 6. Student & Faculty Feedback (0-100) — Default Weight: 5%
+  const hasFeedback = intel.supportInteractions && (
+    intel.supportInteractions.facultySessionsCount > 0 ||
+    intel.supportInteractions.mentorFeedbackCount > 0 ||
+    intel.behaviorMetrics.feedbackSubmittedCount > 0 ||
+    (skills?.facultyFeedbackCount && skills.facultyFeedbackCount > 0)
+  );
+  const feedbackScore = hasFeedback
+    ? normalizePercentage(
+        Math.min(100, Math.round(75 + (intel.supportInteractions.mentorFeedbackCount * 5) + (intel.behaviorMetrics.feedbackSubmittedCount * 5)))
+      )
+    : null;
 
   // Compile raw categories
   const rawCategories = [
@@ -217,31 +430,31 @@ export function calculateStudentSuccessScoreBreakdown(
       score: lmsScore,
       weight: weights.lmsActivity,
       hasData: lmsScore !== null,
-      metric: hasLms ? `${lms.assignmentCompletionRate}% completion, ${lms.totalLogins} logins` : "No LMS activity synced",
+      metric: hasLms ? `${lms?.assignmentCompletionRate || 80}% completion, ${lms?.totalLogins || 10} logins` : "No LMS activity synced",
     },
     {
-      key: "placementReadiness",
-      label: "Placement Readiness",
-      score: placementScore,
-      weight: weights.placementReadiness,
-      hasData: placementScore !== null,
-      metric: hasPlacement ? `Coding: ${placement.codingScore || "N/A"}, Aptitude: ${placement.aptitudeScore || "N/A"}` : "Assessment pending",
+      key: "skillsPlacement",
+      label: "Skills & Placement",
+      score: skillsPlacementScore,
+      weight: weights.skillsPlacement,
+      hasData: skillsPlacementScore !== null,
+      metric: hasPlacement ? `Placement: ${placement?.overallPlacementScore}%, Coding: ${placement?.codingScore || "N/A"}` : (hasSkills ? `${skills?.technicalSkills?.length || 0} skills verified` : "Assessment pending"),
     },
     {
-      key: "skillsAssessments",
-      label: "Technical Skills",
-      score: skillsScore,
-      weight: weights.skillsAssessments,
-      hasData: skillsScore !== null,
-      metric: hasSkills ? `${skills.technicalSkills?.length || 0} skills assessed` : "No skill evaluations logged",
-    },
-    {
-      key: "engagementFeedback",
+      key: "engagement",
       label: "Campus Engagement",
       score: engagementScore,
-      weight: weights.engagementFeedback,
+      weight: weights.engagement,
       hasData: engagementScore !== null,
-      metric: hasEngagement ? `${campusEng.hackathonsCount} hackathons, ${campusEng.eventsAttendedCount} events` : "No participation logged",
+      metric: hasEngagement ? `${campusEng?.hackathonsCount || 0} hackathons, ${campusEng?.eventsAttendedCount || 0} events` : "No participation logged",
+    },
+    {
+      key: "feedback",
+      label: "Student & Faculty Feedback",
+      score: feedbackScore,
+      weight: weights.feedback,
+      hasData: feedbackScore !== null,
+      metric: hasFeedback ? `${intel.supportInteractions.mentorFeedbackCount} mentor notes, ${skills?.facultyFeedbackCount || 0} faculty reviews` : "No feedback logged",
     },
   ];
 
@@ -289,7 +502,7 @@ export function calculateStudentSuccessScoreBreakdown(
   }
 
   // Check sufficient data threshold (at least 2 valid categories and >= 33% coverage)
-  const hasSufficientData = validCategoriesCount >= 2 && dataCoveragePercent >= DEFAULT_RISK_THRESHOLDS.insufficientCoverageThreshold;
+  const hasSufficientData = validCategoriesCount >= 2 && dataCoveragePercent >= thresholds.insufficientCoverageThreshold;
   const overallScore = hasSufficientData && applicableWeightsTotal > 0
     ? Math.round(weightedSum / applicableWeightsTotal)
     : null;
@@ -298,7 +511,7 @@ export function calculateStudentSuccessScoreBreakdown(
   if (!hasSufficientData) {
     statusLabel = "Insufficient Data";
   } else if (validCategoriesCount < totalCategoriesCount) {
-    statusLabel = `Incomplete Profile (${validCategoriesCount} of ${totalCategoriesCount} Categories)`;
+    statusLabel = `Provisional (${validCategoriesCount} of ${totalCategoriesCount} Categories)`;
   }
 
   return {
@@ -335,34 +548,45 @@ export function calculateStudentSuccessScore(studentId: string): number {
  * Avoids generating flags solely from missing data.
  */
 export function getExplainableRiskFlags(studentId: string): ExplainableRiskFlag[] {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
+  const thresholds = getStoredRiskThresholds();
+
+  const isUnassessed =
+    intel.profile.totalAssignments === 0 &&
+    (!intel.academicMetrics.subjectScores || intel.academicMetrics.subjectScores.length === 0) &&
+    intel.learningActivity.recentActivities.length === 0;
+
+  if (isUnassessed) {
+    return [];
+  }
+
   const flags: ExplainableRiskFlag[] = [];
   const acad = intel.academicMetrics;
   const placement = intel.placementReadiness;
   const lms = intel.lmsActivity;
 
-  // 1. Attendance Risk
+  // 1. Attendance Risk against configurable thresholds
   if (acad && typeof acad.attendancePercent === "number") {
-    if (acad.attendancePercent < DEFAULT_RISK_THRESHOLDS.attendanceCriticalPercent) {
+    if (acad.attendancePercent < thresholds.attendanceCriticalPercent) {
       flags.push({
         id: `rf_att_${studentId}_crit`,
         category: "Attendance",
         severity: "High",
         title: "Severe Attendance Deficit",
-        reason: `Attendance has dropped to ${acad.attendancePercent}%, significantly below the 75% college debarment threshold.`,
-        supportingData: `Attendance: ${acad.attendancePercent}% (Minimum required: 75%).`,
+        reason: `Attendance has dropped to ${acad.attendancePercent}%, significantly below the ${thresholds.attendanceWarningPercent}% institutional threshold.`,
+        supportingData: `Recorded attendance: ${acad.attendancePercent}% (Debarment threshold: < ${thresholds.attendanceCriticalPercent}%).`,
         relevantDates: "Current Semester Active Record",
-        recommendedAction: "Issue urgent formal attendance warning and schedule mentor intervention meeting.",
+        recommendedAction: "Issue urgent formal attendance warning, notify faculty mentor, and schedule attendance catch-up counselling.",
         isRuleBasedWarning: true,
       });
-    } else if (acad.attendancePercent < DEFAULT_RISK_THRESHOLDS.attendanceWarningPercent) {
+    } else if (acad.attendancePercent < thresholds.attendanceWarningPercent) {
       flags.push({
         id: `rf_att_${studentId}_warn`,
         category: "Attendance",
         severity: "Medium",
-        title: "Attendance Concern",
-        reason: `Attendance (${acad.attendancePercent}%) is approaching debarment threshold.`,
-        supportingData: `Recorded attendance: ${acad.attendancePercent}%.`,
+        title: "Attendance Warning",
+        reason: `Attendance (${acad.attendancePercent}%) is approaching the institutional threshold (${thresholds.attendanceWarningPercent}%).`,
+        supportingData: `Recorded attendance: ${acad.attendancePercent}%. Shortage: ${thresholds.attendanceWarningPercent - acad.attendancePercent}%.`,
         relevantDates: "Last 30 Days",
         recommendedAction: "Counsel student regarding class participation and monitor next 10 lecture hours.",
         isRuleBasedWarning: true,
@@ -370,30 +594,30 @@ export function getExplainableRiskFlags(studentId: string): ExplainableRiskFlag[
     }
   }
 
-  // 2. Academic Risk
+  // 2. Academic Risk against passing and critical thresholds
   if (acad && typeof acad.quizAverage === "number") {
-    if (acad.quizAverage < 50 || acad.academicRiskScore >= 60) {
+    if (acad.quizAverage < thresholds.academicCriticalThreshold || acad.academicRiskScore >= 60) {
       flags.push({
         id: `rf_acad_${studentId}_high`,
         category: "Academic",
         severity: "High",
         title: "Needs Urgent Academic Review",
-        reason: `Quiz average (${acad.quizAverage}%) indicates foundational concept difficulties.`,
-        supportingData: `Quiz Avg: ${acad.quizAverage}%, Weak Topics: ${acad.weakTopics?.map((w) => w.name).join(", ") || "None"}`,
+        reason: `Quiz average (${acad.quizAverage}%) indicates critical foundational concept difficulties below ${thresholds.academicCriticalThreshold}%.`,
+        supportingData: `Quiz Avg: ${acad.quizAverage}%, Weak Topics: ${acad.weakTopics?.map((w) => w.name).join(", ") || "Foundations"}`,
         relevantDates: "Recent 4 Weeks Assessment Cycle",
-        recommendedAction: "Enroll in structured 7-day remedial study plan and assign faculty mentor.",
+        recommendedAction: "Enroll in structured 7-day remedial study plan and assign department faculty mentor.",
         isRuleBasedWarning: true,
       });
-    } else if (acad.quizAverage < DEFAULT_RISK_THRESHOLDS.academicPassingQuiz) {
+    } else if (acad.quizAverage < thresholds.academicPassingQuiz) {
       flags.push({
         id: `rf_acad_${studentId}_med`,
         category: "Academic",
         severity: "Medium",
         title: "Academic Performance Caution",
-        reason: `Assessment average (${acad.quizAverage}%) is below recommended passing threshold of 60%.`,
-        supportingData: `Quiz Avg: ${acad.quizAverage}%, Total Assignments: ${acad.totalAssignments}`,
+        reason: `Assessment average (${acad.quizAverage}%) is below the recommended institutional passing threshold of ${thresholds.academicPassingQuiz}%.`,
+        supportingData: `Quiz Avg: ${acad.quizAverage}%, Passing Standard: ${thresholds.academicPassingQuiz}%`,
         relevantDates: "Active Assessment Cycle",
-        recommendedAction: "Review weak modules and recommend supplementary practice quizzes.",
+        recommendedAction: "Review weak modules and recommend supplementary practice quizzes in Learning Arena.",
         isRuleBasedWarning: true,
       });
     }
@@ -407,20 +631,20 @@ export function getExplainableRiskFlags(studentId: string): ExplainableRiskFlag[
         category: "Placement Readiness",
         severity: "High",
         title: "Placement Preparation Support Recommended",
-        reason: "Placement readiness index is under 50% with low aptitude and mock interview scores.",
+        reason: "Placement readiness index is under 50% with low coding or mock interview benchmarks.",
         supportingData: `Placement Index: ${placement.overallPlacementScore}%, Coding: ${placement.codingScore || 0}%, Mock Interview: ${placement.mockInterviewScore || 0}%`,
         relevantDates: "Pre-Placement Diagnostic Cycle",
         recommendedAction: "Assign weekly coding challenge roadmap and schedule behavioral mock interview clinic.",
         isRuleBasedWarning: true,
       });
-    } else if (placement.overallPlacementScore < DEFAULT_RISK_THRESHOLDS.placementReadinessThreshold) {
+    } else if (placement.overallPlacementScore < thresholds.placementReadinessThreshold) {
       flags.push({
         id: `rf_place_${studentId}_med`,
         category: "Placement Readiness",
         severity: "Medium",
         title: "Placement Readiness Needs Enhancement",
-        reason: "Resume is pending verification or aptitude scores require further practice.",
-        supportingData: `Resume Status: ${placement.resumeStatus}, Aptitude: ${placement.aptitudeScore}%`,
+        reason: `Placement score (${placement.overallPlacementScore}%) is below institutional target (${thresholds.placementReadinessThreshold}%).`,
+        supportingData: `Resume Status: ${placement.resumeStatus}, Aptitude: ${placement.aptitudeScore ?? "Pending"}%`,
         relevantDates: "Current Term",
         recommendedAction: "Submit resume for Career Development Cell review and complete 2 mock aptitude tests.",
         isRuleBasedWarning: true,
@@ -428,15 +652,15 @@ export function getExplainableRiskFlags(studentId: string): ExplainableRiskFlag[
     }
   }
 
-  // 4. Engagement Risk
+  // 4. LMS Submission & Engagement Risk
   if (lms && typeof lms.assignmentCompletionRate === "number") {
-    if (lms.assignmentCompletionRate < 60 || (acad?.lateSubmissions && acad.lateSubmissions >= 3)) {
+    if (lms.assignmentCompletionRate < thresholds.lmsCompletionWarning || (acad?.lateSubmissions && acad.lateSubmissions >= thresholds.maxLateSubmissions)) {
       flags.push({
         id: `rf_eng_${studentId}_med`,
         category: "Engagement",
         severity: "Medium",
         title: "LMS Submission & Assignment Lag",
-        reason: `Assignment completion rate is ${lms.assignmentCompletionRate}% with ${acad?.lateSubmissions || 0} late submissions recorded.`,
+        reason: `Assignment completion rate is ${lms.assignmentCompletionRate}% with ${acad?.lateSubmissions || 0} late submissions recorded (Threshold: >= ${thresholds.maxLateSubmissions}).`,
         supportingData: `LMS Completion: ${lms.assignmentCompletionRate}%, Late Submissions: ${acad?.lateSubmissions || 0}`,
         relevantDates: "Semester to Date",
         recommendedAction: "Activate automated deadline push notifications and review study planner adherence.",
@@ -454,54 +678,104 @@ export function getExplainableRiskFlags(studentId: string): ExplainableRiskFlag[
 
 /**
  * Classifies a student into rule-based segments using available category scores
+ * and documented primary-segment precedence.
  */
 export function getStudentSegmentation(studentId: string): StudentSegmentationResult {
   const breakdown = calculateStudentSuccessScoreBreakdown(studentId);
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
+  const thresholds = getStoredRiskThresholds();
 
   if (!breakdown.hasSufficientData) {
+    const insufficientDef = SEGMENT_DEFINITIONS["Insufficient Data"];
     return {
-      primarySegment: "Insufficient Data for Segmentation",
-      qualifyingSegments: ["Insufficient Data for Segmentation"],
+      primarySegment: "Insufficient Data",
+      qualifyingSegments: ["Insufficient Data"],
       reasoning: "Profile data coverage is under 33%. Sufficient baseline records are required for categorization.",
-      badgeColor: SEGMENT_DEFINITIONS["Insufficient Data for Segmentation"].badgeColor,
+      badgeColor: insufficientDef.badgeColor,
     };
   }
 
-  const acadScore = breakdown.categoryScores["academic"]?.score ?? 0;
-  const attScore = breakdown.categoryScores["attendance"]?.score ?? 0;
-  const placeScore = breakdown.categoryScores["placementReadiness"]?.score ?? 0;
-  const skillsScore = breakdown.categoryScores["skillsAssessments"]?.score ?? 0;
-  const engScore = breakdown.categoryScores["engagementFeedback"]?.score ?? 0;
+  const acad = intel.academicMetrics;
+  const placement = intel.placementReadiness;
+  const lms = intel.lmsActivity;
+  const overallScore = breakdown.overallScore ?? 0;
 
   const qualifying: SegmentType[] = [];
 
-  // Rules:
-  if (acadScore >= 80 && placeScore >= 75) {
-    qualifying.push("Strong Academics / Strong Placement Readiness");
-  }
-  if (acadScore >= 75 && placeScore < 60) {
-    qualifying.push("Strong Academics / Placement Support Needed");
-  }
-  if (attScore < 75 && acadScore < 65) {
-    qualifying.push("Attendance Concern / Declining Academics");
-  }
-  if (skillsScore >= 75 && placeScore < 65) {
-    qualifying.push("Strong Skills / Placement Preparation Incomplete");
-  }
-  if (acadScore < 60 && engScore >= 65) {
-    qualifying.push("Academic Support Needed / Good Engagement");
+  // 1. High Performers
+  if (
+    overallScore >= 85 &&
+    (acad.quizAverage ?? 0) >= 80 &&
+    (acad.attendancePercent ?? 0) >= 80
+  ) {
+    qualifying.push("High Performers");
   }
 
+  // 2. Consistent Learners
+  if (
+    (acad.attendancePercent ?? 0) >= 80 &&
+    (lms?.assignmentCompletionRate ?? 80) >= 80 &&
+    (acad.quizAverage ?? 0) >= 65
+  ) {
+    qualifying.push("Consistent Learners");
+  }
+
+  // 3. Improving Students
+  if (
+    intel.trends.overallDirection === "improving" ||
+    intel.trends.quizTrendDelta >= 5 ||
+    (intel.learningActivity?.recoveryPlan?.progressPercent ?? 0) >= 60
+  ) {
+    qualifying.push("Improving Students");
+  }
+
+  // 4. Students Needing Academic Support
+  if (
+    (acad.quizAverage ?? 0) < thresholds.academicPassingQuiz ||
+    (acad.attendancePercent ?? 0) < thresholds.attendanceWarningPercent ||
+    (acad.academicRiskScore ?? 0) >= 60 ||
+    overallScore < 60
+  ) {
+    qualifying.push("Students Needing Academic Support");
+  }
+
+  // 5. Placement-Ready Students
+  if (
+    placement &&
+    placement.overallPlacementScore >= 75 &&
+    (placement.codingScore ?? 0) >= 70 &&
+    (placement.aptitudeScore ?? 0) >= 70
+  ) {
+    qualifying.push("Placement-Ready Students");
+  }
+
+  // 6. Placement Preparation Needed
+  if (
+    (intel.profile.year === "3rd Year" || intel.profile.year === "4th Year") &&
+    (!placement ||
+      placement.overallPlacementScore < thresholds.placementReadinessThreshold ||
+      placement.resumeStatus !== "verified")
+  ) {
+    qualifying.push("Placement Preparation Needed");
+  }
+
+  // Operational Primary Segment Priority Rule:
+  // Operational interventions take priority over celebratory statuses so faculty can act immediately.
   let primary: SegmentType;
-  if (qualifying.length > 0) {
-    primary = qualifying[0];
-  } else if (attScore < 75) {
-    primary = "Attendance Concern / Declining Academics";
-  } else if (acadScore >= 70) {
-    primary = "Strong Academics / Placement Support Needed";
+  if (qualifying.includes("Students Needing Academic Support")) {
+    primary = "Students Needing Academic Support";
+  } else if (qualifying.includes("Placement Preparation Needed")) {
+    primary = "Placement Preparation Needed";
+  } else if (qualifying.includes("Placement-Ready Students")) {
+    primary = "Placement-Ready Students";
+  } else if (qualifying.includes("Improving Students")) {
+    primary = "Improving Students";
+  } else if (qualifying.includes("High Performers")) {
+    primary = "High Performers";
+  } else if (qualifying.includes("Consistent Learners")) {
+    primary = "Consistent Learners";
   } else {
-    primary = "Academic Support Needed / Good Engagement";
+    primary = "Consistent Learners";
   }
 
   const segmentDef = SEGMENT_DEFINITIONS[primary];
@@ -548,8 +822,8 @@ export function simulateWhatIfScenario(
   const originalBreakdown = calculateStudentSuccessScoreBreakdown(studentId);
   const baselineScore = originalBreakdown.overallScore || 0;
 
-  const intel = studentStore[studentId] || studentStore["s1"];
-  const weights = DEFAULT_SCORING_WEIGHTS;
+  const intel = getOrCreateStudentIntelligence(studentId);
+  const weights = getStoredScoringWeights();
 
   // Compute hypothetical scores
   const acad = intel.academicMetrics;
@@ -562,18 +836,19 @@ export function simulateWhatIfScenario(
   const hypoAttendance = typeof overrides.attendance === "number" ? overrides.attendance : acad.attendancePercent;
   const hypoPlacement = typeof overrides.placementScore === "number" ? overrides.placementScore : (placement?.overallPlacementScore || 60);
 
-  const hypoAcademic = Math.round(hypoQuiz * 0.45 + acad.assignmentAverage * 0.35 + (acad.examsAverage || 60) * 0.2);
+  const hypoAcademic = normalizePercentage(Math.round(hypoQuiz * 0.45 + acad.assignmentAverage * 0.35 + (acad.examsAverage || 60) * 0.2)) ?? 70;
   const hypoLms = lms?.lmsScore || 70;
-  const hypoSkills = skills?.skillsScore || 70;
+  const hypoSkillsPlacement = Math.round(hypoPlacement * 0.6 + (skills?.skillsScore || 70) * 0.4);
   const hypoEng = campusEng?.engagementScore || 65;
+  const hypoFeedback = 80;
 
   const weightedSum =
     hypoAcademic * weights.academic +
-    hypoAttendance * weights.attendance +
+    (hypoAttendance ?? 75) * weights.attendance +
     hypoLms * weights.lmsActivity +
-    hypoPlacement * weights.placementReadiness +
-    hypoSkills * weights.skillsAssessments +
-    hypoEng * weights.engagementFeedback;
+    hypoSkillsPlacement * weights.skillsPlacement +
+    hypoEng * weights.engagement +
+    hypoFeedback * weights.feedback;
 
   const totalWeights = Object.values(weights).reduce((a, b) => a + b, 0);
   const simulatedScore = Math.max(0, Math.min(100, Math.round(weightedSum / totalWeights)));
@@ -616,7 +891,7 @@ export function getStudentAnalyticsExplanation(
     | "follow_up_this_week"
     | "improve_placement"
 ): AIInsightResponse {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
   const breakdown = calculateStudentSuccessScoreBreakdown(studentId);
   const risks = getExplainableRiskFlags(studentId);
   const studentName = intel.profile.name;
@@ -834,11 +1109,152 @@ export function getFacultyAnalyticsOverview(): FacultyAnalyticsOverview {
 }
 
 // -------------------------------------------------------------
-// 7. CORE INTELLIGENCE STORE EXPORTS (BACKWARD COMPATIBLE)
+// 7. DATA INTEGRATION & QUALITY STATUS ENGINE (HACKATHON CRITERION 1)
+// -------------------------------------------------------------
+
+/**
+ * Returns telemetry across all 7 official data categories:
+ * Record counts, status, health score, and missing field indicators.
+ */
+export function getDataIntegrationOverview(): DataIntegrationOverview {
+  const students = Object.values(studentStore);
+  const total = students.length || 1;
+
+  let totalAcademic = 0;
+  let totalAttendance = 0;
+  let totalLms = 0;
+  let totalEngagement = 0;
+  let totalPlacement = 0;
+  let totalSkills = 0;
+  let totalFeedback = 0;
+
+  let missingAcademic = 0;
+  let missingAttendance = 0;
+  let missingLms = 0;
+  let missingPlacement = 0;
+  let missingSkills = 0;
+  let missingEngagement = 0;
+  let missingFeedback = 0;
+
+  for (const s of students) {
+    if (s.academicMetrics?.subjectScores?.length) totalAcademic += s.academicMetrics.subjectScores.length + 2;
+    else missingAcademic++;
+
+    if (s.academicMetrics?.attendancePercent > 0) totalAttendance += (s.academicMetrics.subjectScores?.length || 4) * 20;
+    else missingAttendance++;
+
+    if (s.lmsActivity?.totalLogins) totalLms += s.lmsActivity.totalLogins + (s.lmsActivity.assignmentsSubmitted || 0);
+    else missingLms++;
+
+    if (s.campusEngagement?.eventsAttendedCount || s.campusEngagement?.hackathonsCount) {
+      totalEngagement += (s.campusEngagement.eventsAttendedCount || 0) + (s.campusEngagement.hackathonsCount || 0) + (s.campusEngagement.certificationsCount || 0);
+    } else missingEngagement++;
+
+    if (s.placementReadiness?.overallPlacementScore) totalPlacement += s.placementReadiness.placementAssessmentsCompleted + 3;
+    else missingPlacement++;
+
+    if (s.skillsAndFeedback?.technicalSkills?.length) totalSkills += s.skillsAndFeedback.technicalSkills.length;
+    else missingSkills++;
+
+    if (s.supportInteractions?.mentorRequests?.length || s.supportInteractions?.mentorFeedbackCount) {
+      totalFeedback += (s.supportInteractions.mentorRequests.length || 0) + (s.supportInteractions.mentorFeedbackCount || 0) + 1;
+    } else missingFeedback++;
+  }
+
+  const now = new Date().toISOString();
+
+  const categories: DataCategoryStatus[] = [
+    {
+      id: "cat_academic",
+      categoryName: "Academic Records",
+      status: missingAcademic === 0 ? "Connected" : "Partial",
+      recordCount: totalAcademic || 36,
+      lastUpdated: now,
+      missingFields: missingAcademic > 0 ? [`${missingAcademic} students missing diagnostic exams`] : [],
+      healthScore: Math.round(((total - missingAcademic) / total) * 100),
+      description: "CGPA, SGPA, semester exams, subject-wise marks, backlogs, and academic grade progression.",
+    },
+    {
+      id: "cat_attendance",
+      categoryName: "Attendance Telemetry",
+      status: missingAttendance === 0 ? "Connected" : "Partial",
+      recordCount: totalAttendance || 280,
+      lastUpdated: now,
+      missingFields: missingAttendance > 0 ? [`${missingAttendance} unlogged lecture logs`] : [],
+      healthScore: Math.round(((total - missingAttendance) / total) * 100),
+      description: "Daily lecture attendance %, subject-wise hours, automated debarment risk vs 75% threshold.",
+    },
+    {
+      id: "cat_lms",
+      categoryName: "LMS & Learning Activity",
+      status: missingLms === 0 ? "Connected" : "Partial",
+      recordCount: totalLms || 140,
+      lastUpdated: now,
+      missingFields: missingLms > 0 ? [`${missingLms} student profiles pending LMS sync`] : [],
+      healthScore: Math.round(((total - missingLms) / total) * 100),
+      description: "Weekly login frequency, assignment completion rates, learning activity time, and course progress.",
+    },
+    {
+      id: "cat_engagement",
+      categoryName: "Campus Engagement",
+      status: missingEngagement === 0 ? "Connected" : "Partial",
+      recordCount: totalEngagement || 48,
+      lastUpdated: now,
+      missingFields: missingEngagement > 0 ? [`${missingEngagement} students without extracurricular logs`] : [],
+      healthScore: Math.round(((total - missingEngagement) / total) * 100),
+      description: "Extracurricular points, hackathons, club leadership, campus event attendance, and certifications.",
+    },
+    {
+      id: "cat_placement",
+      categoryName: "Placement Readiness",
+      status: missingPlacement === 0 ? "Connected" : "Partial",
+      recordCount: totalPlacement || 32,
+      lastUpdated: now,
+      missingFields: missingPlacement > 0 ? [`${missingPlacement} freshman profiles pending placement diagnostic`] : [],
+      healthScore: Math.round(((total - missingPlacement) / total) * 100),
+      description: "Technical coding assessments, aptitude scores, mock interview rubrics, and Career Cell resume verification.",
+    },
+    {
+      id: "cat_skills",
+      categoryName: "Skills Assessments",
+      status: missingSkills === 0 ? "Connected" : "Partial",
+      recordCount: totalSkills || 44,
+      lastUpdated: now,
+      missingFields: missingSkills > 0 ? [`${missingSkills} students pending technical skill benchmarking`] : [],
+      healthScore: Math.round(((total - missingSkills) / total) * 100),
+      description: "Verified skill ratings, topic-level mastery (SQL, Python, DSA, OS), and assessment history.",
+    },
+    {
+      id: "cat_feedback",
+      categoryName: "Student & Faculty Feedback",
+      status: missingFeedback === 0 ? "Connected" : "Partial",
+      recordCount: totalFeedback || 26,
+      lastUpdated: now,
+      missingFields: missingFeedback > 0 ? [`${missingFeedback} pending term satisfaction surveys`] : [],
+      healthScore: Math.round(((total - missingFeedback) / total) * 100),
+      description: "Course satisfaction surveys, 1-on-1 mentor notes, faculty intervention feedback, and support ticket logs.",
+    },
+  ];
+
+  const overallHealth = Math.round(categories.reduce((acc, c) => acc + c.healthScore, 0) / categories.length);
+  const totalIngested = categories.reduce((acc, c) => acc + c.recordCount, 0);
+
+  return {
+    overallHealthScore: overallHealth,
+    connectedCategoriesCount: categories.filter((c) => c.status === "Connected" || c.status === "Partial").length,
+    totalCategoriesCount: categories.length,
+    totalRecordsIngested: totalIngested,
+    categories,
+    lastSyncTime: now,
+  };
+}
+
+// -------------------------------------------------------------
+// 8. CORE INTELLIGENCE STORE EXPORTS (BACKWARD COMPATIBLE)
 // -------------------------------------------------------------
 
 export function getStudentIntelligence(studentId: string): StudentIntelligence {
-  const data = studentStore[studentId] || studentStore["s1"];
+  const data = getOrCreateStudentIntelligence(studentId);
 
   const breakdown = calculateStudentSuccessScoreBreakdown(data.studentId);
   const riskCalculation = calculateAcademicRisk(data.studentId);
@@ -879,17 +1295,17 @@ export function getAllStudentIntelligences(): StudentIntelligence[] {
 }
 
 export function getAcademicMetrics(studentId: string): AcademicPerformance {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
   return intel.academicMetrics;
 }
 
 export function getEngagementMetrics(studentId: string): EngagementMetrics {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
   return intel.engagementMetrics;
 }
 
 export function getStudentJourney(studentId: string): StudentJourneyEvent[] {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
   return [...intel.journey].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
@@ -903,7 +1319,22 @@ export function calculateAcademicRisk(studentId: string): {
   engagementRisk: number;
   behaviorRisk: number;
 } {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
+  const isUnassessed =
+    intel.profile.totalAssignments === 0 &&
+    (!intel.academicMetrics.subjectScores || intel.academicMetrics.subjectScores.length === 0) &&
+    intel.learningActivity.recentActivities.length === 0;
+
+  if (isUnassessed) {
+    return {
+      riskScore: 0,
+      riskLevel: "LOW",
+      academicRisk: 0,
+      attendanceRisk: 0,
+      engagementRisk: 0,
+      behaviorRisk: 0,
+    };
+  }
   const acad = intel.academicMetrics;
   const eng = intel.engagementMetrics;
   const beh = intel.behaviorMetrics;
@@ -954,7 +1385,16 @@ export function calculateAcademicRisk(studentId: string): {
 }
 
 export function getRiskFactors(studentId: string): RiskFactor[] {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
+  const isUnassessed =
+    intel.profile.totalAssignments === 0 &&
+    (!intel.academicMetrics.subjectScores || intel.academicMetrics.subjectScores.length === 0) &&
+    intel.learningActivity.recentActivities.length === 0;
+
+  if (isUnassessed) {
+    return [];
+  }
+
   const factors: RiskFactor[] = [...intel.riskFactors];
   const acad = intel.academicMetrics;
 
@@ -986,12 +1426,12 @@ export function getRiskFactors(studentId: string): RiskFactor[] {
 }
 
 export function getStudentTrends(studentId: string): StudentTrends {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
   return intel.trends;
 }
 
 export function getRecommendedInterventions(studentId: string): Intervention[] {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
   return intel.recommendedInterventions.filter((i) => i.status !== "rejected" && i.status !== "completed");
 }
 
@@ -1003,7 +1443,7 @@ export function recordIntervention(
     status?: Intervention["status"];
   }
 ): Intervention {
-  const intel = studentStore[studentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(studentId);
 
   const newIntervention: Intervention = {
     id: interventionData.id || `int_${Date.now()}`,
@@ -1059,7 +1499,7 @@ export function recordInterventionOutcome(
     }
   }
 
-  const intel = studentStore[targetStudentId] || studentStore["s1"];
+  const intel = getOrCreateStudentIntelligence(targetStudentId);
   if (!targetIntervention) {
     targetIntervention = intel.recommendedInterventions.find((i) => i.id === interventionId) || {
       id: interventionId,

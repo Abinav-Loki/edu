@@ -31,7 +31,7 @@ export default function ShiftSection() {
             From monitoring students to understanding students.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            Legacy institutional tools collect data to create static spreadsheets. CampusOS transforms continuous signals into explainable insights and closed-loop interventions.
+            Legacy institutional tools collect data to create static spreadsheets. ARIVON AI transforms continuous signals into explainable insights and closed-loop interventions.
           </p>
         </div>
 
@@ -69,14 +69,14 @@ export default function ShiftSection() {
             </div>
           </div>
 
-          {/* CAMPUSOS APPROACH (AFTER) */}
+          {/* ARIVON AI APPROACH (AFTER) */}
           <div className="lg:col-span-8 p-8 rounded-3xl bg-gradient-to-br from-indigo-900 via-slate-900 to-sky-950 text-white shadow-2xl relative overflow-hidden border border-indigo-500/30 flex flex-col justify-between">
             <div className="absolute top-0 right-0 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
             <div>
               <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-sm mb-4">
                 <Sparkles className="w-5 h-5 text-emerald-400" />
-                <span className="uppercase tracking-wider">CampusOS AI Intelligence</span>
+                <span className="uppercase tracking-wider">ARIVON AI Intelligence</span>
               </div>
               <h3 className="text-2xl font-black mb-6 text-white">
                 Proactive Closed-Loop Student Success

@@ -126,7 +126,7 @@ export const defaultCosmetics: Cosmetic[] = [
   { id: "av-4", type: "avatar", name: "AI Oracle", description: "One with the AI.", rarity: "LEGENDARY", cost: 3000, icon: "🤖", unlockRequirement: "Reach Level 25" },
   
   // Frames
-  { id: "fr-1", type: "frame", name: "Default Frame", description: "Standard CampusOS frame.", rarity: "COMMON", cost: 0, isDefault: true },
+  { id: "fr-1", type: "frame", name: "Default Frame", description: "Standard ARIVON frame.", rarity: "COMMON", cost: 0, isDefault: true },
   { id: "fr-2", type: "frame", name: "Scholar Frame", description: "For dedicated learners.", rarity: "UNCOMMON", cost: 400 },
   { id: "fr-3", type: "frame", name: "Golden Frame", description: "A shiny golden frame.", rarity: "RARE", cost: 800 },
   { id: "fr-4", type: "frame", name: "Neon Knowledge", description: "Glows with academic energy.", rarity: "EPIC", cost: 1500 },

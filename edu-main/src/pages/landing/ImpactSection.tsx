@@ -54,7 +54,7 @@ export default function ImpactSection() {
             Designed for better student outcomes.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            CampusOS helps institutions move from uncoordinated reactive efforts to data-driven, measurable student success.
+            ARIVON AI helps institutions move from uncoordinated reactive efforts to data-driven, measurable student success.
           </p>
         </div>
 

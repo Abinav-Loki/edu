@@ -37,6 +37,7 @@ interface LearningContextType {
   updateStreak: () => void;
   unlockCosmetic: (cosmeticId: string, cost: number) => boolean;
   equipCosmetic: (cosmeticId: string, type: "avatar" | "frame" | "background" | "title") => void;
+  buyFrameWithXP: (frameId: string, cost: number) => boolean;
 }
 
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
@@ -498,12 +499,44 @@ export function LearningProvider({ children }: { children: ReactNode }) {
     if (isSupabaseConfigured()) saveLearningProfileToDB(updatedProf).catch(console.error);
   }
 
+  function buyFrameWithXP(frameId: string, cost: number): boolean {
+    if (!activeUserId || !profile) return false;
+    // If already owned, simply equip it!
+    if (profile.unlockedCosmetics.includes(frameId)) {
+      equipCosmetic(frameId, "frame");
+      return true;
+    }
+    // Check if student has sufficient EXP
+    if (profile.totalXP < cost) {
+      return false;
+    }
+
+    const newXP = Math.max(0, profile.totalXP - cost);
+    const updatedProf: LearningProfile = {
+      ...profile,
+      totalXP: newXP,
+      arenaCoins: Math.max(0, profile.arenaCoins - cost),
+      frameId: frameId,
+      unlockedCosmetics: [...profile.unlockedCosmetics, frameId]
+    };
+
+    setProfile(updatedProf);
+    try {
+      localStorage.setItem(`edu_learning_profile_${activeUserId}`, JSON.stringify(updatedProf));
+    } catch (e) {}
+
+    if (isSupabaseConfigured()) {
+      saveLearningProfileToDB(updatedProf).catch(console.error);
+    }
+    return true;
+  }
+
   return (
     <LearningContext.Provider value={{
       profile, missions, quests, skills, achievements, xpEvents,
       cosmetics: defaultCosmetics,
       awardXP, completeMission, completeQuestTask, completeQuiz, updateStreak,
-      unlockCosmetic, equipCosmetic
+      unlockCosmetic, equipCosmetic, buyFrameWithXP
     }}>
       {children}
     </LearningContext.Provider>

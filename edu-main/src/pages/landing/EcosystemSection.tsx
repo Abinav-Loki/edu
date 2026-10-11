@@ -26,7 +26,7 @@ export default function EcosystemSection() {
             The Connected Success Ecosystem
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            All CampusOS features work together through a single intelligence layer — converting everyday student activity into continuous insights.
+            All ARIVON AI features work together through a single intelligence layer — converting everyday student activity into continuous insights.
           </p>
         </div>
 
@@ -41,7 +41,7 @@ export default function EcosystemSection() {
           <div className="relative z-20 w-44 h-44 rounded-full bg-gradient-to-br from-indigo-600 via-sky-600 to-cyan-500 p-1 shadow-2xl shadow-sky-500/30 flex items-center justify-center text-white animate-[pulse_4s_infinite_ease-in-out]">
             <div className="w-full h-full rounded-full bg-slate-900 flex flex-col items-center justify-center p-4 text-center">
               <Brain className="w-8 h-8 text-sky-400 mb-1" />
-              <span className="text-[10px] font-black text-sky-300 uppercase tracking-widest">CampusOS</span>
+              <span className="text-[10px] font-black text-sky-300 uppercase tracking-widest">ARIVON AI</span>
               <span className="text-xs font-black leading-tight">STUDENT SUCCESS INTELLIGENCE</span>
             </div>
           </div>

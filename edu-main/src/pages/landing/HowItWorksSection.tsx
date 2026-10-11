@@ -58,7 +58,7 @@ export default function HowItWorksSection() {
             Intelligence that closes the loop.
           </h2>
           <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-            CampusOS connects raw signals to institutional action and measures intervention efficacy to drive continuous student success.
+            ARIVON AI connects raw signals to institutional action and measures intervention efficacy to drive continuous student success.
           </p>
         </div>
 
