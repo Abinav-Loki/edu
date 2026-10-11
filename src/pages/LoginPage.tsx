@@ -24,6 +24,9 @@ export default function LoginPage() {
   const [department, setDepartment] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const roleDisplay = {
     student: { 
       portalName: "Student Portal",
@@ -56,21 +59,53 @@ export default function LoginPage() {
 
   const Icon = roleDisplay.icon;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (isSignup) {
-      if (password !== confirmPassword) {
-        alert("Passwords do not match");
-        return;
-      }
-      signup(role, { name: fullName, department });
-    } else {
-      login(role, identifier);
+  async function handleQuickTestLogin(testRole: Role, userId: string, targetPath: string) {
+    setLoading(true);
+    try {
+      await login(testRole, userId);
+      navigate(targetPath);
+    } catch {
+      navigate(targetPath);
+    } finally {
+      setLoading(false);
     }
-    
-    if (role === "student") navigate("/");
-    if (role === "faculty") navigate("/faculty");
-    if (role === "admin") navigate("/admin");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      if (isSignup) {
+        await signup(
+          role,
+          {
+            name: fullName || (role === "student" ? "Arun Kumar" : role === "faculty" ? "Rahul Kumar" : "Admin User"),
+            department: department || "Computer Science",
+            email: identifier || (role === "student" ? "arun.k@student.edu" : "rahul.k@faculty.edu")
+          },
+          password
+        );
+      } else {
+        await login(
+          role,
+          identifier || (role === "student" ? "s1" : role === "faculty" ? "f1" : "admin1"),
+          password
+        );
+      }
+      
+      if (role === "student") navigate("/dashboard");
+      else if (role === "faculty") navigate("/faculty");
+      else navigate("/admin");
+    } catch (err: any) {
+      console.warn("Auth bypass active:", err);
+      if (role === "student") navigate("/dashboard");
+      else if (role === "faculty") navigate("/faculty");
+      else navigate("/admin");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -84,8 +119,8 @@ export default function LoginPage() {
         {/* Glass Card */}
         <div className="w-full max-w-md p-8 sm:p-10 rounded-[2rem] z-10 border border-white/20 shadow-2xl backdrop-blur-xl bg-[rgba(255,255,255,0.12)] relative overflow-hidden">
           
-          <div className="flex flex-col mb-8">
-            <div className="flex items-center gap-3 mb-6">
+          <div className="flex flex-col mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white backdrop-blur-sm">
                 <Icon className="w-5 h-5" />
               </div>
@@ -95,103 +130,165 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1.5">
               {isSignup ? roleDisplay.signupTitle : roleDisplay.loginTitle}
             </h1>
-            <p className="text-[#E6E8F5] text-sm opacity-80 leading-relaxed">
+            <p className="text-[#E6E8F5] text-xs sm:text-sm opacity-80 leading-relaxed">
               {isSignup ? roleDisplay.signupSub : roleDisplay.loginSub}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Quick Instant Test Selector */}
+          <div className="mb-5 p-3.5 rounded-2xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-teal-500/20 border border-indigo-400/30 backdrop-blur-md">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>⚡ Instant 1-Click Test Access</span>
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                Auth Bypassed
+              </span>
+            </div>
+            <p className="text-[11px] text-white/70 mb-2.5">
+              Click any profile below to instantly explore that user's view & progress:
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleQuickTestLogin("student", "s1", "/dashboard")}
+                className="p-2 rounded-xl bg-white/10 hover:bg-indigo-600/40 border border-white/15 text-left transition-all group"
+              >
+                <div className="text-xs font-bold text-white group-hover:text-indigo-200">👨‍🎓 Arun Kumar</div>
+                <div className="text-[10px] text-white/60">Student (s1)</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickTestLogin("student", "s2", "/dashboard")}
+                className="p-2 rounded-xl bg-white/10 hover:bg-indigo-600/40 border border-white/15 text-left transition-all group"
+              >
+                <div className="text-xs font-bold text-white group-hover:text-indigo-200">👩‍🎓 Ananya Roy</div>
+                <div className="text-[10px] text-white/60">Student (s2)</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickTestLogin("faculty", "f1", "/faculty")}
+                className="p-2 rounded-xl bg-white/10 hover:bg-indigo-600/40 border border-white/15 text-left transition-all group"
+              >
+                <div className="text-xs font-bold text-white group-hover:text-indigo-200">👨‍🏫 Dr. Rahul Kumar</div>
+                <div className="text-[10px] text-white/60">Faculty Portal</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickTestLogin("admin", "admin1", "/admin")}
+                className="p-2 rounded-xl bg-white/10 hover:bg-indigo-600/40 border border-white/15 text-left transition-all group"
+              >
+                <div className="text-xs font-bold text-white group-hover:text-indigo-200">🛡️ Campus Admin</div>
+                <div className="text-[10px] text-white/60">Admin Panel</div>
+              </button>
+            </div>
+          </div>
+
+          {errorMsg && (
+            <div className="p-3 mb-4 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 text-xs font-semibold">
+              {errorMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             {isSignup && (
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1.5 ml-1">Full Name</label>
+                  <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1 ml-1">Full Name</label>
                   <input 
                     type="text" 
                     value={fullName}
                     onChange={e => setFullName(e.target.value)}
-                    required
                     placeholder="e.g. Arun Kumar"
-                    className="w-full p-3.5 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
+                    className="w-full p-3 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1.5 ml-1">Department</label>
+                  <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1 ml-1">Department</label>
                   <input 
                     type="text" 
                     value={department}
                     onChange={e => setDepartment(e.target.value)}
-                    required
                     placeholder="e.g. Computer Science"
-                    className="w-full p-3.5 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
+                    className="w-full p-3 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
                   />
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1.5 ml-1">
+              <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1 ml-1">
                 {role === 'student' ? 'Student ID / Email' : role === 'faculty' ? 'Faculty ID / Email' : 'Admin ID / Email'}
+                <span className="text-[10px] text-white/50 font-normal lowercase ml-1.5">(optional)</span>
               </label>
               <input 
                 type="text" 
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
-                required
-                placeholder={role === 'student' ? "e.g. s1 or arun@university.edu" : "e.g. m1 or admin1"}
-                className="w-full p-3.5 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
+                placeholder={role === 'student' ? "e.g. arun.k@student.edu (or any name / blank)" : "e.g. rahul.k@faculty.edu (or blank)"}
+                className="w-full p-3 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1.5 ml-1">Password</label>
+              <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1 ml-1">
+                Password
+                <span className="text-[10px] text-emerald-400 font-normal lowercase ml-1.5">(bypassed for testing)</span>
+              </label>
               <input 
                 type="password" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full p-3.5 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
+                placeholder="Optional — any password or leave blank"
+                className="w-full p-3 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
               />
             </div>
 
             {isSignup && (
               <div>
-                <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1.5 ml-1">Confirm Password</label>
+                <label className="block text-xs font-semibold text-[#E6E8F5] uppercase tracking-wider mb-1 ml-1">Confirm Password</label>
                 <input 
                   type="password" 
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full p-3.5 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
+                  placeholder="Optional"
+                  className="w-full p-3 rounded-xl border border-white/20 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#6D62F0] focus:border-transparent outline-none bg-white/5 transition-all"
                 />
               </div>
             )}
 
             <button 
               type="submit"
-              className="w-full bg-[#3B2FBF] hover:bg-[#6D62F0] text-white font-semibold rounded-xl py-3.5 mt-2 flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/10 group"
+              disabled={loading}
+              className="w-full bg-[#3B2FBF] hover:bg-[#6D62F0] text-white font-semibold rounded-xl py-3.5 mt-2 flex items-center justify-center gap-2 transition-all shadow-lg shadow-black/10 group disabled:opacity-60 cursor-pointer"
             >
-              {isSignup ? "Create Account" : "Sign In"}
+              {loading ? "Entering Portal..." : (isSignup ? "Create Account & Test" : "Sign In & Test Website")}
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>
 
-          <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="mt-5 flex flex-col items-center gap-2.5">
             {!isSignup ? (
               <>
-                <button className="text-xs text-[#E6E8F5]/70 hover:text-white transition-colors">Forgot Password?</button>
+                <button
+                  type="button"
+                  onClick={() => navigate(role === "student" ? "/dashboard" : role === "faculty" ? "/faculty" : "/admin")}
+                  className="text-xs text-[#14B8A6] hover:underline font-semibold"
+                >
+                  🚀 Skip Directly to Portal
+                </button>
                 {role !== 'admin' && (
-                  <Link to={`/${role}/signup`} className="text-xs text-white hover:text-[#14B8A6] font-semibold transition-colors">
+                  <Link to={`/${role}/signup`} className="text-xs text-white/80 hover:text-white font-medium transition-colors">
                     Create {role.charAt(0).toUpperCase() + role.slice(1)} Account
                   </Link>
                 )}
               </>
             ) : (
-              <Link to={`/${role}/login`} className="text-xs text-white hover:text-[#14B8A6] font-semibold transition-colors">
+              <Link to={`/${role}/login`} className="text-xs text-white/80 hover:text-white font-medium transition-colors">
                 Already have an account? Sign in
               </Link>
             )}
@@ -199,10 +296,10 @@ export default function LoginPage() {
         </div>
         
         {/* Quick Demo Switcher - for testing purposes so user can quickly switch roles in demo */}
-        <div className="absolute bottom-6 flex gap-3 opacity-40 hover:opacity-100 transition-opacity">
-          <Link to="/student/login" className="text-[10px] text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors">Student</Link>
-          <Link to="/faculty/login" className="text-[10px] text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors">Faculty</Link>
-          <Link to="/admin/login" className="text-[10px] text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors">Admin</Link>
+        <div className="mt-4 flex gap-3 opacity-60 hover:opacity-100 transition-opacity z-10">
+          <Link to="/student/login" className="text-[10px] text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors">Student Login</Link>
+          <Link to="/faculty/login" className="text-[10px] text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors">Faculty Login</Link>
+          <Link to="/admin/login" className="text-[10px] text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors">Admin Login</Link>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ export interface User {
   id: string;
   name: string;
   role: Role;
+  email?: string;
   avatar?: string;
   department?: string;
 }
@@ -18,7 +19,9 @@ export interface Student extends User {
   lateSubmissions: number;
   totalAssignments: number;
   weakTopics: string[];
+  assignedMentorId?: string;
 }
+
 
 export interface Mentor extends User {
   role: "faculty";
@@ -112,6 +115,7 @@ export interface Material {
   fileName: string;
   fileType: string;
   fileSize?: number;
+  fileUrl?: string;
   subject: string;
   description: string;
   uploadedBy: string;
@@ -137,6 +141,7 @@ export const initialStudents: Student[] = [
     id: "s1",
     name: "Arun Kumar",
     role: "student",
+    email: "arun.k@student.edu",
     course: "B.Tech IT",
     year: "3rd Year",
     attendancePercent: 65,
@@ -150,6 +155,7 @@ export const initialStudents: Student[] = [
     id: "s2",
     name: "Ananya Roy",
     role: "student",
+    email: "ananya.r@student.edu",
     course: "B.Tech CSE",
     year: "3rd Year",
     attendancePercent: 95,
@@ -198,6 +204,19 @@ export const initialStudents: Student[] = [
     totalAssignments: 9,
     weakTopics: ["Thermodynamics", "Fluid Mechanics"],
   },
+  {
+    id: "s6",
+    name: "Sneha Patel",
+    role: "student",
+    course: "B.Tech AI&DS",
+    year: "1st Year",
+    attendancePercent: 88,
+    quizAverage: 65,
+    assignmentAverage: 70,
+    lateSubmissions: 0,
+    totalAssignments: 2,
+    weakTopics: ["Python Basics"],
+  },
 ];
 
 export const initialMentors: Mentor[] = [
@@ -205,6 +224,7 @@ export const initialMentors: Mentor[] = [
     id: "f1",
     name: "Rahul Kumar",
     role: "faculty",
+    email: "rahul.k@faculty.edu",
     department: "Computer Science",
     specialization: ["DBMS", "SQL", "Database Design"],
     availability: ["Monday 4:30 PM", "Tuesday 3:00 PM"],
@@ -214,6 +234,7 @@ export const initialMentors: Mentor[] = [
     id: "f2",
     name: "Priya Sharma",
     role: "faculty",
+    email: "priya.s@faculty.edu",
     department: "Information Technology",
     specialization: ["Data Structures", "Algorithms"],
     availability: ["Wednesday 10:00 AM"],

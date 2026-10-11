@@ -97,6 +97,14 @@
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.72) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08) !important;
+}
+
 /* =============================================
    Frosted Glassmorphism Stat Cards
    ============================================= */
@@ -501,3 +509,79 @@
   background: linear-gradient(135deg, var(--bg-gradient-from) 0%, var(--bg-gradient-via) 50%, var(--bg-gradient-to) 100%);
   min-height: 100vh;
 }
+
+/* Dark mode element styling */
+.dark [aria-labelledby="hero-heading"] {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 27, 75, 0.7) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark [aria-labelledby="hero-heading"] h1 {
+  color: #f8fafc !important;
+}
+
+.dark [aria-labelledby="hero-heading"] p {
+  color: #cbd5e1 !important;
+}
+
+.dark [aria-labelledby="hero-heading"] div[role="alert"] {
+  background: rgba(30, 15, 25, 0.7) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.dark .badge-pill {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.dark input[type="text"],
+.dark input[type="search"],
+.dark input[type="password"],
+.dark input[type="email"],
+.dark select,
+.dark textarea {
+  color: #f8fafc;
+}
+
+.dark .chat-bubble-ai {
+  background: rgba(30, 41, 59, 0.8) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+@keyframes dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes zoomUp {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    filter: drop-shadow(0 0 0 rgba(14, 165, 233, 0));
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.18);
+    filter: drop-shadow(0 0 25px rgba(14, 165, 233, 0.8));
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.1);
+    filter: drop-shadow(0 0 15px rgba(14, 165, 233, 0.5));
+  }
+}
+
+@keyframes floatMascot {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.05);
+  }
+}
+
+

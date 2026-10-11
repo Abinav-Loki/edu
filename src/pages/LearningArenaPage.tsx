@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLearning } from "../context/LearningContext";
 import { useCampus } from "../context/CampusContext";
 import { useNavigate } from "react-router-dom";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { fetchArenaProgressFromDB, saveArenaProgressToDB } from "../services/supabaseService";
 import {
   Gamepad2,
   Map as MapIcon,
@@ -32,14 +34,74 @@ import FullMapModal from "../components/learning/FullMapModal";
 export default function LearningArenaPage() {
   const navigate = useNavigate();
   const { currentUser } = useCampus();
-  const { profile, missions, quests, achievements, completeMission, completeQuestTask } = useLearning();
+  const { profile, missions, quests, achievements, completeMission, completeQuestTask, awardXP } = useLearning();
 
   const [activeTab, setActiveTab] = useState<"command" | "missions" | "skills" | "trophies" | "daily">("command");
   const [activeSubjectId, setActiveSubjectId] = useState<string>("dbms");
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [userProgress, setUserProgress] = useState<UserProgressState>(initialUserProgress);
 
-  if (!profile) return null;
+  // Initialize progress from user-isolated localStorage synchronously so page refreshes never reset
+  const [userProgress, setUserProgress] = useState<UserProgressState>(() => {
+    try {
+      if (currentUser?.id) {
+        const localKey = `edu_arena_progress_${currentUser.id}`;
+        const saved = localStorage.getItem(localKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.completedTopicIds) return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Error reading arena progress from localStorage:", e);
+    }
+    return initialUserProgress;
+  });
+
+  // Re-synchronize arena progress strictly for the active user identity on mount or user switch
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setUserProgress(initialUserProgress);
+      return;
+    }
+    const studentId = currentUser.id;
+    const localKey = `edu_arena_progress_${studentId}`;
+    try {
+      const saved = localStorage.getItem(localKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.completedTopicIds) setUserProgress(parsed);
+      } else {
+        setUserProgress(initialUserProgress);
+      }
+    } catch (e) {
+      setUserProgress(initialUserProgress);
+    }
+
+    fetchArenaProgressFromDB(studentId).then((dbProgress) => {
+      if (dbProgress && dbProgress.completedTopicIds) {
+        setUserProgress(dbProgress);
+      }
+    }).catch(console.error);
+  }, [currentUser?.id]);
+
+  if (!currentUser || !profile) {
+    return (
+      <div className="flex-1 px-4 sm:px-6 lg:px-8 py-12 flex flex-col items-center justify-center text-center">
+        <div className="max-w-md bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">Learning Arena</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Please sign in with a student or staff account to access your personal learning roadmap and track XP.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-all shadow-md"
+          >
+            Sign In to Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const xpToNextLevel = 150;
   const currentLevelXP = profile.totalXP % 150;
@@ -61,16 +123,28 @@ export default function LearningArenaPage() {
   const activeCurrentTopic =
     activeSubject.topics.find((t) => t.id === activeCurrentTopicId) || activeSubject.topics[0];
 
-  // Topic mission completion handler
+  // Topic mission completion handler with strict idempotency
   const handleCompleteTopicMission = (subjectId: string, topicId: string, xpEarned: number) => {
+    if (!currentUser?.id) return;
+    const studentId = currentUser.id;
+
+    // Guard: Prevent double-awarding XP if topic is already completed
+    const currentCompleted = userProgress.completedTopicIds[subjectId] || [];
+    if (currentCompleted.includes(topicId)) {
+      return;
+    }
+
+    // Award XP to user profile & gamification engine
+    if (awardXP) {
+      const subject = subjectWorlds.find((s) => s.id === subjectId);
+      awardXP(xpEarned, `Mastered ${subject?.name || subjectId} Mission`, "learning_arena");
+    }
+
     setUserProgress((prev) => {
       const subject = subjectWorlds.find((s) => s.id === subjectId);
       if (!subject) return prev;
 
-      const currentCompleted = prev.completedTopicIds[subjectId] || [];
-      const updatedCompleted = currentCompleted.includes(topicId)
-        ? currentCompleted
-        : [...currentCompleted, topicId];
+      const updatedCompleted = [...(prev.completedTopicIds[subjectId] || []), topicId];
 
       // Find next unlocked topic in progression
       let nextCurrentTopicId = prev.currentMissionTopicId[subjectId];
@@ -81,7 +155,7 @@ export default function LearningArenaPage() {
 
       const updatedXP = (prev.subjectXP[subjectId] || 0) + xpEarned;
 
-      return {
+      const updatedState: UserProgressState = {
         completedTopicIds: {
           ...prev.completedTopicIds,
           [subjectId]: updatedCompleted,
@@ -95,8 +169,14 @@ export default function LearningArenaPage() {
           [subjectId]: updatedXP,
         },
       };
+
+      // Instantly save to user-specific localStorage & Supabase
+      saveArenaProgressToDB(studentId, updatedState).catch(console.error);
+
+      return updatedState;
     });
   };
+
 
   return (
     <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 lg:py-6 text-slate-800">
@@ -121,14 +201,16 @@ export default function LearningArenaPage() {
           </div>
           
           <div className="relative shrink-0 z-10 hidden sm:block">
-            <div className="absolute -top-4 -left-6 bg-white px-3 py-1.5 rounded-xl shadow-md border border-slate-100 text-[10px] font-bold text-slate-600 whitespace-nowrap animate-[bounce_3s_ease-in-out_infinite]">
-              Let's conquer your<br />today's missions! 🚀
+            <div className="absolute -top-3 -left-12 z-20 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl shadow-lg border border-indigo-100 text-xs font-bold text-slate-700 whitespace-nowrap animate-[bounce_3s_ease-in-out_infinite]">
+              Let's conquer your missions! 🚀
             </div>
-            <img
-              src="/ai_mascot.jpg"
-              alt="Mascot"
-              className="w-40 h-40 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
-            />
+            <div className="w-36 h-36 rounded-2xl bg-gradient-to-tr from-indigo-50/70 to-purple-50/70 border border-indigo-100/50 p-2 shadow-sm flex items-center justify-center overflow-hidden">
+              <img
+                src="/ai_mascot.jpg"
+                alt="Mascot"
+                className="w-full h-full object-contain mix-blend-multiply drop-shadow-md hover:scale-105 transition-transform duration-300"
+              />
+            </div>
           </div>
           
           <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-indigo-100 rounded-full blur-3xl opacity-60 z-0" />

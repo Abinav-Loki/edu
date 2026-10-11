@@ -8,7 +8,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { performanceData } from "../data/mock";
+import { performanceData as defaultPerformanceData } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -35,7 +36,44 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   );
 }
 
-export default function PerformanceChart() {
+interface PerformanceChartProps {
+  studentId?: string;
+}
+
+export default function PerformanceChart({ studentId }: PerformanceChartProps = {}) {
+  const { currentUser, students } = useCampus();
+  const effectiveId = studentId || (currentUser?.role === "student" ? currentUser.id : null);
+  const currentStudent = effectiveId
+    ? students.find((s) => s.id === effectiveId) || (currentUser?.id === effectiveId ? (currentUser as any) : null)
+    : students[0];
+
+  const chartData = currentStudent ? [
+    {
+      week: "Week 1",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.05)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 1.02)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.03))
+    },
+    {
+      week: "Week 2",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.02)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.98)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.01))
+    },
+    {
+      week: "Week 3",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 0.95)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.96)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 0.98))
+    },
+    {
+      week: "Week 4",
+      quiz: currentStudent.quizAverage || 75,
+      assignment: currentStudent.assignmentAverage || 80,
+      attendance: currentStudent.attendancePercent || 82
+    }
+  ] : defaultPerformanceData;
+
   return (
     <div className="glass-card p-6 border-white/60 bg-white/40" aria-label="Performance Overview chart">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
@@ -64,8 +102,8 @@ export default function PerformanceChart() {
       <div className="w-full" style={{ height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={performanceData}
-            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+            data={chartData}
+            margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
             className="animate-[pageEnter_0.6s_ease-out_forwards]"
           >
             <CartesianGrid
@@ -81,12 +119,13 @@ export default function PerformanceChart() {
               dy={10}
             />
             <YAxis
+              width={42}
               domain={[0, 100]}
               tick={{ fontSize: 12, fill: "#64748b", fontWeight: 500 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v: number) => `${v}%`}
-              dx={-10}
+              dx={-4}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(56, 189, 248, 0.2)', strokeWidth: 2 }} />
             <Line

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { weakTopics, type Priority } from "../data/mock";
+import { weakTopics as defaultWeakTopics, type Priority } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
 
 const priorityConfig: Record<
   Priority,
@@ -30,6 +31,17 @@ const priorityConfig: Record<
 const getProgress = (str: string) => 40 + (str.length * 3) % 40;
 
 export default function WeakTopics() {
+  const { currentUser, students } = useCampus();
+  const currentStudent = (currentUser?.role === "student" ? (currentUser as any) : null) || students.find(s => s.id === currentUser?.id) || students[0];
+
+  const topics = currentStudent?.weakTopics && currentStudent.weakTopics.length > 0
+    ? currentStudent.weakTopics.map((name: string, i: number) => ({
+        id: `wt-${i}`,
+        name,
+        priority: (i === 0 ? "high" : i === 1 ? "medium" : "low") as Priority
+      }))
+    : defaultWeakTopics;
+
   return (
     <div className="glass-card p-6 border-white/60 bg-white/40" aria-label="Weak topics requiring attention">
       <div className="flex items-center justify-between mb-5">
@@ -48,7 +60,7 @@ export default function WeakTopics() {
       </div>
 
       <div className="space-y-3">
-        {weakTopics.map((topic) => {
+        {topics.map((topic: { id: string; name: string; priority: Priority }) => {
           const config = priorityConfig[topic.priority];
           const progress = getProgress(topic.name);
           return (

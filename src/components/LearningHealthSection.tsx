@@ -2,15 +2,44 @@ import { Link } from "react-router-dom";
 import { TrendingDown, Activity, ArrowRight, AlertTriangle } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, Tooltip } from "recharts";
 import GlassCard from "./GlassCard";
-import { performanceData } from "../data/mock";
-
-// Calculate composite consistency index per week for visualization
-const consistencyData = performanceData.map((d) => ({
-  week: d.week,
-  score: Math.round(d.quiz * 0.4 + d.attendance * 0.4 + d.assignment * 0.2),
-}));
+import { performanceData as defaultPerformanceData } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
 
 export default function LearningHealthSection() {
+  const { currentUser, students } = useCampus();
+  const currentStudent = (currentUser?.role === "student" ? (currentUser as any) : null) || students.find(s => s.id === currentUser?.id) || students[0];
+
+  const studentPerf = currentStudent ? [
+    {
+      week: "Week 1",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.05)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 1.02)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.03))
+    },
+    {
+      week: "Week 2",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.02)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.98)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.01))
+    },
+    {
+      week: "Week 3",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 0.95)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.96)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 0.98))
+    },
+    {
+      week: "Week 4",
+      quiz: currentStudent.quizAverage || 75,
+      assignment: currentStudent.assignmentAverage || 80,
+      attendance: currentStudent.attendancePercent || 82
+    }
+  ] : defaultPerformanceData;
+
+  const consistencyData = studentPerf.map((d) => ({
+    week: d.week,
+    score: Math.round(d.quiz * 0.4 + d.attendance * 0.4 + d.assignment * 0.2),
+  }));
   return (
     <section className="mb-8" aria-label="Learning Health Analytics">
       <div className="flex items-center gap-2 mb-4">

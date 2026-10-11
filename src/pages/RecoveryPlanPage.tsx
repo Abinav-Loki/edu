@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, Circle, Play, BookOpen, HelpCircle, RotateCcw, Target } from "lucide-react";
-import { recoveryPlan } from "../data/mock";
+import { recoveryPlan as defaultPlan } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { fetchRecoveryPlanFromDB, saveRecoveryPlanToDB } from "../services/supabaseService";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 import GlassCard from "../components/GlassCard";
@@ -13,26 +16,76 @@ const taskTypeConfig: Record<string, { icon: React.ReactNode; color: string }> =
 };
 
 export default function RecoveryPlanPage() {
+  const { currentUser } = useCampus();
+  const [plan, setPlan] = useState(defaultPlan);
   const [completedIds, setCompletedIds] = useState<Set<string>>(
     new Set(
-      recoveryPlan.dailyTasks
+      defaultPlan.dailyTasks
         .filter((t) => t.completed)
         .map((t) => t.id)
     )
   );
 
+  useEffect(() => {
+    if (isSupabaseConfigured() && currentUser?.id) {
+      fetchRecoveryPlanFromDB(currentUser.id).then(dbPlan => {
+        if (dbPlan) {
+          const dbTasks = dbPlan.tasks && dbPlan.tasks.length > 0 
+            ? dbPlan.tasks.map(t => ({
+                id: t.id,
+                title: t.title,
+                duration: t.duration,
+                type: t.type as any,
+                completed: t.completed
+              }))
+            : defaultPlan.dailyTasks;
+
+          setPlan(prev => ({
+            ...prev,
+            days: dbPlan.days,
+            currentDay: dbPlan.currentDay,
+            focus: dbPlan.focus,
+            tasks: dbPlan.totalTasks,
+            dailyTasks: dbTasks
+          }));
+
+          setCompletedIds(new Set(dbTasks.filter(t => t.completed).map(t => t.id)));
+        }
+      }).catch(console.error);
+    }
+  }, [currentUser?.id]);
+
   function toggleTask(id: string) {
-    setCompletedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(completedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setCompletedIds(next);
+
+    const updatedTasks = plan.dailyTasks.map(t => ({
+      ...t,
+      completed: next.has(t.id)
+    }));
+
+    if (isSupabaseConfigured() && currentUser?.id) {
+      saveRecoveryPlanToDB({
+        id: `rp-${currentUser.id}`,
+        studentId: currentUser.id,
+        title: "Academic Recovery Plan",
+        focus: plan.focus,
+        days: plan.days,
+        tasksCompleted: next.size,
+        totalTasks: updatedTasks.length,
+        progressPercent: Math.round((next.size / updatedTasks.length) * 100),
+        status: next.size === updatedTasks.length ? "completed" : "in_progress",
+        currentDay: plan.currentDay,
+        tasks: updatedTasks as any
+      }).catch(console.error);
+    }
   }
 
   const completedCount = completedIds.size;
-  const totalTasks = recoveryPlan.dailyTasks.length;
-  const progressPercent = Math.round((completedCount / totalTasks) * 100);
+  const totalTasks = plan.dailyTasks.length;
+  const progressPercent = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
 
   return (
     <>
@@ -40,7 +93,7 @@ export default function RecoveryPlanPage() {
       <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-7 mobile-content max-w-3xl mx-auto">
         <PageHeader
           title="Recovery Plan"
-          subtitle={`Day ${recoveryPlan.currentDay} of ${recoveryPlan.days}`}
+          subtitle={`Day ${plan.currentDay} of ${plan.days}`}
           badge="7-Day Plan"
         />
 
@@ -80,7 +133,7 @@ export default function RecoveryPlanPage() {
           </div>
 
           <p className="text-xs text-slate-400 mt-2">
-            Focus: {recoveryPlan.focus}
+            Focus: {plan.focus}
           </p>
         </GlassCard>
 
@@ -90,7 +143,7 @@ export default function RecoveryPlanPage() {
             Today's Tasks
           </h2>
           <div className="space-y-3">
-            {recoveryPlan.dailyTasks.map((task) => {
+            {plan.dailyTasks.map((task) => {
               const isCompleted = completedIds.has(task.id);
               const typeConf = taskTypeConfig[task.type];
 
@@ -153,7 +206,7 @@ export default function RecoveryPlanPage() {
             className="btn-primary w-full mt-5"
             aria-label="Mark all remaining tasks as complete"
             onClick={() =>
-              setCompletedIds(new Set(recoveryPlan.dailyTasks.map((t) => t.id)))
+              setCompletedIds(new Set(plan.dailyTasks.map((t: any) => t.id)))
             }
           >
             <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
@@ -169,9 +222,9 @@ export default function RecoveryPlanPage() {
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Topics", value: recoveryPlan.weeklyGoals.topics, color: "#6366F1" },
-              { label: "Quizzes", value: recoveryPlan.weeklyGoals.quizzes, color: "#8B5CF6" },
-              { label: "Assignment", value: recoveryPlan.weeklyGoals.assignments, color: "#38bdf8" },
+              { label: "Topics", value: plan.weeklyGoals.topics, color: "#6366F1" },
+              { label: "Quizzes", value: plan.weeklyGoals.quizzes, color: "#8B5CF6" },
+              { label: "Assignment", value: plan.weeklyGoals.assignments, color: "#38bdf8" },
             ].map((g) => (
               <div
                 key={g.label}

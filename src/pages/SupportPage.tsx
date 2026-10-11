@@ -6,7 +6,7 @@ import { Ticket, Paperclip, Camera, X, FileText, Image as ImageIcon, CheckCircle
 import type { TicketAttachment } from "../data/centralData";
 
 export default function SupportPage() {
-  const { supportTickets, addSupportTicket, activeRole } = useCampus();
+  const { supportTickets, addSupportTicket, activeRole, currentUser } = useCampus();
   const [desc, setDesc] = useState("");
   const [category, setCategory] = useState<any>("Academic");
   const [status, setStatus] = useState("idle");
@@ -24,7 +24,7 @@ export default function SupportPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const myTickets = activeRole === "student" 
-    ? supportTickets.filter(t => t.creatorId === "s1")
+    ? supportTickets.filter(t => t.creatorId === (currentUser?.id || "s1"))
     : supportTickets;
 
   // Cleanup camera stream on unmount or when camera modal closes
@@ -152,7 +152,7 @@ export default function SupportPage() {
   function handleSubmit() {
     if (!desc.trim()) return;
     addSupportTicket({
-      creatorId: "s1", // Hardcoded to student for demo
+      creatorId: currentUser?.id || "s1",
       category,
       description: desc.trim(),
       attachments: attachments.length > 0 ? attachments : undefined

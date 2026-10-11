@@ -145,9 +145,9 @@ export default function QuizPage() {
         {/* CTA */}
         <button
           onClick={handleNext}
-          disabled={!selectedId || currentIndex === totalQuestions - 1}
+          disabled={!selectedId}
           className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Next question"
+          aria-label={currentIndex === totalQuestions - 1 ? "Finish Quiz" : "Next question"}
         >
           {currentIndex === totalQuestions - 1 ? "Finish Quiz" : "Next"}
           <ArrowRight className="w-4 h-4" aria-hidden="true" />

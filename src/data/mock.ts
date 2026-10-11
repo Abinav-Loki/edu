@@ -214,12 +214,21 @@ export interface ChatMessage {
   role: "bot" | "user";
   content: string;
   timestamp: string;
+  suggestedFollowUps?: string[];
   attachedFile?: {
     name: string;
     size: string;
     type: string;
     url?: string;
   };
+  sources?: {
+    materialId: string;
+    title: string;
+    pageNumber: number;
+    excerpt: string;
+    similarity: number;
+    subject: string;
+  }[];
 }
 
 export const initialChatMessages: ChatMessage[] = [

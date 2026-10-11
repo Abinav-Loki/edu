@@ -9,6 +9,11 @@ import {
   Users
 } from "lucide-react";
 import { student, performanceData } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
+import {
+  calculateStudentSuccessScoreBreakdown,
+  getExplainableRiskFlags,
+} from "../intelligence/analyticsService";
 import AttendanceRhythmCard from "../components/AttendanceRhythmCard";
 import AssessmentMomentumCard from "../components/AssessmentMomentumCard";
 import AssignmentConsistencyCard from "../components/AssignmentConsistencyCard";
@@ -88,6 +93,46 @@ function getGreeting(): string {
 }
 
 export default function HomePage() {
+  const { currentUser, students } = useCampus();
+  const currentStudent = (currentUser?.role === "student" ? (currentUser as any) : null) || students.find(s => s.id === currentUser?.id) || students[0];
+  const displayName = currentUser?.name?.split(" ")[0] || currentUser?.name || "Student";
+
+  const studentPerf = currentStudent ? [
+    {
+      week: "Week 1",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.05)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 1.02)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.03))
+    },
+    {
+      week: "Week 2",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.02)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.98)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.01))
+    },
+    {
+      week: "Week 3",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 0.95)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.96)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 0.98))
+    },
+    {
+      week: "Week 4",
+      quiz: currentStudent.quizAverage || 75,
+      assignment: currentStudent.assignmentAverage || 80,
+      attendance: currentStudent.attendancePercent || 82
+    }
+  ] : performanceData;
+
+  const attendanceTrend = (currentStudent?.attendancePercent || 80) >= 75 ? "up" : "down";
+  const quizTrend = (currentStudent?.quizAverage || 75) >= 70 ? "up" : "down";
+  const assignmentTrend = (currentStudent?.assignmentAverage || 80) >= 70 ? "up" : "down";
+  const weakestTopic = currentStudent?.weakTopics?.[0] || "Normalization";
+  const studentId = currentStudent?.id || "s1";
+  const studentBreakdown = calculateStudentSuccessScoreBreakdown(studentId);
+  const studentRisks = getExplainableRiskFlags(studentId);
+  const hasAcademicRisk = studentRisks.some((r) => r.category === "Academic" || r.category === "Attendance");
+
   return (
     <>
       {/* Mobile sticky header */}
@@ -119,7 +164,7 @@ export default function HomePage() {
                 id="hero-heading"
                 className="text-3xl md:text-4xl lg:text-[40px] font-bold text-slate-800 leading-tight tracking-tight"
               >
-                {getGreeting()}, Arun! 👋
+                {getGreeting()}, {displayName}! 👋
               </h1>
               <p className="text-base text-slate-600 mt-2 max-w-lg font-medium">
                 Here's your learning summary. Keep going — you're closer than
@@ -131,34 +176,66 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Academic alert (Right side on desktop, bottom on mobile) */}
-          <div className="xl:w-[340px] xl:border-l border-white/40 p-6 flex flex-col justify-center bg-gradient-to-br from-red-50/50 to-pink-50/50">
-            <div
-              className="rounded-2xl p-4 bg-white/60 backdrop-blur-md border border-red-100 shadow-sm shadow-red-500/5"
-              role="alert"
-              aria-live="polite"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0 border border-red-200">
-                  <AlertTriangle className="w-5 h-5 text-red-500" aria-hidden="true" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-red-700 leading-tight">
-                    Academic Attention Needed
-                  </p>
-                  <p className="text-xs text-red-600/80 mt-1 font-medium leading-snug">
-                    Your performance has dropped in the last 2 weeks.
-                  </p>
-                  <Link
-                    to="/progress"
-                    className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 transition-colors mt-2"
-                  >
-                    View Details
-                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-                  </Link>
+          {/* Academic alert / Success Status (Right side on desktop, bottom on mobile) */}
+          <div className="xl:w-[340px] xl:border-l border-white/40 p-6 flex flex-col justify-center bg-gradient-to-br from-indigo-50/30 to-sky-50/30">
+            {hasAcademicRisk ? (
+              <div
+                className="rounded-2xl p-4 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md border border-rose-100 dark:border-rose-900/50 shadow-sm"
+                role="alert"
+                aria-live="polite"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-800">
+                    <AlertTriangle className="w-5 h-5 text-rose-500" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-rose-700 dark:text-rose-400 leading-tight">
+                      {studentRisks[0]?.title || "Academic Attention Needed"}
+                    </p>
+                    <p className="text-xs text-rose-600/80 dark:text-rose-300 mt-1 font-medium leading-snug">
+                      {studentRisks[0]?.reason || "Assessment or attendance metrics require review."}
+                    </p>
+                    <Link
+                      to="/progress"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors mt-2"
+                    >
+                      View Student 360°
+                      <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div
+                className="rounded-2xl p-4 bg-white/70 dark:bg-slate-800/80 backdrop-blur-md border border-emerald-100 dark:border-emerald-900/50 shadow-sm"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-800">
+                    <Sparkles className="w-5 h-5 text-emerald-600" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 leading-tight">
+                        On Track for Success
+                      </p>
+                      <span className="text-xs font-black font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {studentBreakdown.overallScore ?? "—"}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-emerald-600/90 dark:text-emerald-300 mt-1 font-medium leading-snug">
+                      High attendance and quiz consistency. Keep up the strong momentum!
+                    </p>
+                    <Link
+                      to="/progress"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-800 transition-colors mt-2"
+                    >
+                      View Student 360°
+                      <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -168,32 +245,32 @@ export default function HomePage() {
           aria-label="Academic Analytics Performance Insights"
         >
           <AttendanceRhythmCard
-            currentPercent={student.attendancePercent}
-            trend={student.attendanceTrend}
+            currentPercent={currentStudent?.attendancePercent ?? 82}
+            trend={attendanceTrend as any}
             targetPercent={75}
-            history={performanceData.map((d) => ({
+            history={studentPerf.map((d) => ({
               week: d.week,
               attendance: d.attendance,
             }))}
           />
 
           <AssessmentMomentumCard
-            currentAverage={student.quizAverage}
-            trend={student.quizTrend}
-            history={performanceData.map((d) => ({
+            currentAverage={currentStudent?.quizAverage ?? 76}
+            trend={quizTrend as any}
+            history={studentPerf.map((d) => ({
               week: d.week,
               quiz: d.quiz,
             }))}
             strongestTopic="SQL Joins"
-            weakestTopic="Normalization"
+            weakestTopic={weakestTopic}
           />
 
           <AssignmentConsistencyCard
-            averageScore={student.assignmentAverage}
-            trend={student.assignmentTrend}
-            totalSubmissions={student.totalAssignments}
-            lateSubmissions={student.lateSubmissions}
-            history={performanceData.map((d) => ({
+            averageScore={currentStudent?.assignmentAverage ?? 80}
+            trend={assignmentTrend as any}
+            totalSubmissions={currentStudent?.totalAssignments ?? 8}
+            lateSubmissions={currentStudent?.lateSubmissions ?? 0}
+            history={studentPerf.map((d) => ({
               week: d.week,
               assignment: d.assignment,
             }))}

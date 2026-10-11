@@ -1,8 +1,39 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Calendar, CheckSquare, HelpCircle } from "lucide-react";
-import { recoveryPlan } from "../data/mock";
+import { recoveryPlan as defaultPlan } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { fetchRecoveryPlanFromDB } from "../services/supabaseService";
 
 export default function RecoveryPlanCard() {
+  const { currentUser } = useCampus();
+  const [plan, setPlan] = useState(defaultPlan);
+
+  useEffect(() => {
+    if (isSupabaseConfigured() && currentUser?.id) {
+      fetchRecoveryPlanFromDB(currentUser.id).then(dbPlan => {
+        if (dbPlan) {
+          setPlan(prev => ({
+            ...prev,
+            days: dbPlan.days,
+            currentDay: dbPlan.currentDay,
+            focus: dbPlan.focus,
+            tasks: dbPlan.totalTasks,
+            completedTasks: dbPlan.tasksCompleted ?? prev.completedTasks,
+            dailyTasks: dbPlan.tasks?.map(t => ({
+              id: t.id,
+              title: t.title,
+              duration: t.duration,
+              type: t.type as any,
+              completed: t.completed
+            })) || prev.dailyTasks
+          }));
+        }
+      }).catch(console.error);
+    }
+  }, [currentUser?.id]);
+
   return (
     <div
       className="relative overflow-hidden rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-500/10 border border-white/20"
@@ -19,21 +50,21 @@ export default function RecoveryPlanCard() {
       <div className="relative z-10 flex flex-col h-full">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl font-bold leading-tight">Your 7-Day Recovery Plan</h2>
+            <h2 className="text-2xl font-bold leading-tight">Your {plan.days}-Day Recovery Plan</h2>
             <p className="text-white/80 text-sm mt-1 font-medium">A personalized path back on track.</p>
             
             <div className="mt-4 inline-flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-xl px-3 py-1.5 text-sm font-semibold shadow-sm">
               <span className="w-2 h-2 rounded-full bg-yellow-300 shadow-[0_0_8px_rgba(253,224,71,0.8)]" aria-hidden="true" />
-              Focus: {recoveryPlan.focus}
+              Focus: {plan.focus}
             </div>
           </div>
           
           <div className="flex gap-4 bg-black/10 rounded-2xl p-3 border border-white/10 backdrop-blur-sm self-start">
-            <Stat icon={<Calendar className="w-4 h-4" />} value={`${recoveryPlan.days} Days`} />
+            <Stat icon={<Calendar className="w-4 h-4" />} value={`${plan.days} Days`} />
             <div className="w-px h-6 bg-white/20" />
-            <Stat icon={<CheckSquare className="w-4 h-4" />} value={`${recoveryPlan.tasks} Tasks`} />
+            <Stat icon={<CheckSquare className="w-4 h-4" />} value={`${plan.tasks} Tasks`} />
             <div className="w-px h-6 bg-white/20" />
-            <Stat icon={<HelpCircle className="w-4 h-4" />} value={`${recoveryPlan.quizzes} Quizzes`} />
+            <Stat icon={<HelpCircle className="w-4 h-4" />} value={`${plan.quizzes} Quizzes`} />
           </div>
         </div>
 

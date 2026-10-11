@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Calendar,
@@ -24,6 +24,13 @@ import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 import GlassCard from "../components/GlassCard";
 import { useLearning } from "../context/LearningContext";
+import { useCampus } from "../context/CampusContext";
+import { isSupabaseConfigured } from "../lib/supabase";
+import {
+  fetchStudyTasksFromDB,
+  saveStudyTaskToDB,
+  updateStudyTaskCompletionInDB
+} from "../services/supabaseService";
 import { subjectWorlds } from "../data/learningArenaData";
 
 export interface StudyTask {
@@ -129,10 +136,50 @@ const activityTypeConfig: Record<string, { icon: React.ReactNode; badgeClass: st
 
 export default function StudyPlannerPage() {
   const { profile } = useLearning();
+  const { currentUser } = useCampus();
 
-  const [tasks, setTasks] = useState<StudyTask[]>(initialTasks);
+  const [tasks, setTasks] = useState<StudyTask[]>(() => {
+    if (currentUser?.id) {
+      try {
+        const raw = localStorage.getItem(`edu_study_tasks_${currentUser.id}`);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+    }
+    return initialTasks;
+  });
   const [showWizardModal, setShowWizardModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("All");
+
+  // Load user-scoped study tasks from localStorage & Supabase
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setTasks(initialTasks);
+      return;
+    }
+    const localKey = `edu_study_tasks_${currentUser.id}`;
+    try {
+      const raw = localStorage.getItem(localKey);
+      if (raw) {
+        setTasks(JSON.parse(raw));
+      } else {
+        localStorage.setItem(localKey, JSON.stringify(initialTasks));
+        setTasks(initialTasks);
+      }
+    } catch (e) {
+      setTasks(initialTasks);
+    }
+
+    if (isSupabaseConfigured()) {
+      fetchStudyTasksFromDB(currentUser.id).then((dbTasks) => {
+        if (dbTasks && dbTasks.length > 0) {
+          setTasks(dbTasks as StudyTask[]);
+          try {
+            localStorage.setItem(localKey, JSON.stringify(dbTasks));
+          } catch (e) {}
+        }
+      }).catch(console.error);
+    }
+  }, [currentUser?.id]);
 
   // Wizard state
   const [goal, setGoal] = useState("Prepare for upcoming Midterms");
@@ -146,9 +193,24 @@ export default function StudyPlannerPage() {
   const needsRecovery = true; // Based on Student Intelligence detecting weak DBMS mastery
 
   const toggleTaskCompleted = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
+    if (!currentUser?.id) return;
+    const localKey = `edu_study_tasks_${currentUser.id}`;
+    setTasks((prev) => {
+      const updated = prev.map((t) => {
+        if (t.id === id) {
+          const nextCompleted = !t.completed;
+          if (isSupabaseConfigured()) {
+            updateStudyTaskCompletionInDB(id, nextCompleted).catch(console.error);
+          }
+          return { ...t, completed: nextCompleted };
+        }
+        return t;
+      });
+      try {
+        localStorage.setItem(localKey, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
   };
 
   const handleGeneratePlan = (e: React.FormEvent) => {
@@ -229,6 +291,15 @@ export default function StudyPlannerPage() {
       setTasks(newPlan);
       setIsGenerating(false);
       setShowWizardModal(false);
+
+      if (isSupabaseConfigured()) {
+        newPlan.forEach(task => {
+          saveStudyTaskToDB({
+            ...task,
+            studentId: currentUser?.id || "s1"
+          }).catch(console.error);
+        });
+      }
     }, 1000);
   };
 

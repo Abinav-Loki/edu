@@ -1,5 +1,9 @@
+import { useState, useEffect } from "react";
 import { Calendar, ChevronLeft, ChevronRight, AlertCircle, BookOpen, ClipboardList, Target } from "lucide-react";
-import { calendarEvents } from "../data/mock";
+import { calendarEvents as initialCalendarEvents } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { fetchCalendarEventsFromDB } from "../services/supabaseService";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 import GlassCard from "../components/GlassCard";
@@ -19,9 +23,21 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const OCT_START_DAY = 4; // Oct 1, 2026 is a Thursday (index 4)
 const OCT_DAYS = 31;
 
-const eventDates = new Set(calendarEvents.map((e) => parseInt(e.date.split("-")[2])));
-
 export default function CalendarPage() {
+  const { currentUser } = useCampus();
+  const [events, setEvents] = useState<any[]>(initialCalendarEvents);
+
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      fetchCalendarEventsFromDB(currentUser?.id).then(dbEvents => {
+        if (dbEvents && dbEvents.length > 0) {
+          setEvents(dbEvents);
+        }
+      }).catch(console.error);
+    }
+  }, [currentUser?.id]);
+
+  const eventDates = new Set(events.map((e) => parseInt(e.date?.split("-")?.[2] || "0")));
   return (
     <>
       <MobileHeader />
@@ -97,35 +113,40 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-3">
-              {calendarEvents
-                .sort((a, b) => a.date.localeCompare(b.date))
-                .map((event) => {
-                  const conf = eventTypeConfig[event.type];
-                  const date = new Date(event.date);
-                  return (
-                    <div
-                      key={event.id}
-                      className={`flex items-start gap-3 p-3 rounded-xl border ${conf.bg}`}
-                      role="listitem"
-                      aria-label={`${event.title} on ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${event.time}`}
-                    >
-                      <div className={`${conf.color} mt-0.5`} aria-hidden="true">
-                        {conf.icon}
+              {events.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">No upcoming events scheduled.</p>
+              ) : (
+                events
+                  .slice()
+                  .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+                  .map((event) => {
+                    const conf = eventTypeConfig[event.type] || eventTypeConfig.plan;
+                    const date = new Date(event.date);
+                    return (
+                      <div
+                        key={event.id}
+                        className={`flex items-start gap-3 p-3 rounded-xl border ${conf.bg}`}
+                        role="listitem"
+                        aria-label={`${event.title} on ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${event.time}`}
+                      >
+                        <div className={`${conf.color} mt-0.5`} aria-hidden="true">
+                          {conf.icon}
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-bold uppercase tracking-wide ${conf.color} mb-0.5`}>
+                            {conf.label}
+                          </p>
+                          <p className="text-sm font-semibold text-slate-800 leading-snug">
+                            {event.title}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} • {event.time}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className={`text-xs font-bold uppercase tracking-wide ${conf.color} mb-0.5`}>
-                          {conf.label}
-                        </p>
-                        <p className="text-sm font-semibold text-slate-800 leading-snug">
-                          {event.title}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} • {event.time}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+              )}
             </div>
           </GlassCard>
         </div>

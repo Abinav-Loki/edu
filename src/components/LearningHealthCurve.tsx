@@ -20,28 +20,54 @@ import {
   ReferenceDot
 } from "recharts";
 import GlassCard from "./GlassCard";
-import { performanceData } from "../data/mock";
-
-// Calculate composite health score for each week:
-// Weighted composite index: Attendance 35%, Quiz 45%, Assignment 20%
-const healthCurveData = performanceData.map((item, idx) => {
-  const compositeScore = Math.round(
-    item.attendance * 0.35 + item.quiz * 0.45 + item.assignment * 0.20
-  );
-  
-  // Event signal markers based on real performance milestones
-  let eventMarker: string | null = null;
-  if (idx === 1) eventMarker = "Attendance drop";
-  if (idx === 3) eventMarker = "Quiz drop";
-
-  return {
-    ...item,
-    healthScore: compositeScore,
-    eventMarker,
-  };
-});
+import { performanceData as defaultPerformanceData } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
 
 export default function LearningHealthCurve() {
+  const { currentUser, students } = useCampus();
+  const currentStudent = (currentUser?.role === "student" ? (currentUser as any) : null) || students.find(s => s.id === currentUser?.id) || students[0];
+
+  const studentPerf = currentStudent ? [
+    {
+      week: "Week 1",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.05)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 1.02)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.03))
+    },
+    {
+      week: "Week 2",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.02)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.98)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.01))
+    },
+    {
+      week: "Week 3",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 0.95)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.96)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 0.98))
+    },
+    {
+      week: "Week 4",
+      quiz: currentStudent.quizAverage || 75,
+      assignment: currentStudent.assignmentAverage || 80,
+      attendance: currentStudent.attendancePercent || 82
+    }
+  ] : defaultPerformanceData;
+
+  const healthCurveData = studentPerf.map((item, idx) => {
+    const compositeScore = Math.round(
+      item.attendance * 0.35 + item.quiz * 0.45 + item.assignment * 0.20
+    );
+    let eventMarker: string | null = null;
+    if (idx === 1) eventMarker = "Attendance drop";
+    if (idx === 3) eventMarker = "Quiz drop";
+    return {
+      ...item,
+      healthScore: compositeScore,
+      eventMarker,
+    };
+  });
+
   // Current score is the latest week (Week 4), previous is Week 1
   const latestPoint = healthCurveData[healthCurveData.length - 1];
   const initialPoint = healthCurveData[0];

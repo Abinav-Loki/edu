@@ -2,9 +2,11 @@ import { useCampus } from "../context/CampusContext";
 import PageHeader from "../components/PageHeader";
 import MobileHeader from "../components/MobileHeader";
 import { Users, Server, Wrench, AlertTriangle, ShieldCheck } from "lucide-react";
+import { getFacultyAnalyticsOverview } from "../intelligence/analyticsService";
 
 export default function AdminDashboard() {
   const { students, assets, maintenanceTickets, supportTickets, mentorRequests } = useCampus();
+  const analyticsOverview = getFacultyAnalyticsOverview();
 
   const activeSupportTickets = supportTickets.filter(t => t.status !== "resolved").length;
   const pendingMentors = mentorRequests.filter(m => m.status === "pending").length;
@@ -22,11 +24,55 @@ export default function AdminDashboard() {
           badge="Admin"
         />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatBox icon={Users} label="Total Students" value={students.length * 2480} color="text-sky-500" />
           <StatBox icon={ShieldCheck} label="Active Support" value={activeSupportTickets} color="text-indigo-500" />
           <StatBox icon={Server} label="Campus Assets" value={assets.length * 624} color="text-emerald-500" />
           <StatBox icon={Wrench} label="Maintenance Due" value={maintenanceDue + 97} color="text-amber-500" />
+        </div>
+
+        {/* Smart Campus Analytics Cohort Card */}
+        <div className="glass-card p-5 mb-6 border-l-4 border-l-indigo-500 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-indigo-50/40 via-white/40 to-white/40 dark:from-indigo-950/20 dark:via-slate-800/40 dark:to-slate-800/40">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                Smart Campus Analytics
+              </span>
+              <h2 className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                Cohort Student Success & Risk Telemetry
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Unified 6-category heuristic index • Academic, Attendance, LMS, Placement, Skills & Feedback
+            </p>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Avg Success</span>
+              <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                {analyticsOverview.averageSuccessScore}%
+              </span>
+            </div>
+            <div className="text-center">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Needs Review</span>
+              <span className="text-lg font-black text-rose-600 dark:text-rose-400 font-mono">
+                {analyticsOverview.reviewRequiredCount}
+              </span>
+            </div>
+            <div className="text-center">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">Open Actions</span>
+              <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                {analyticsOverview.openInterventionsCount}
+              </span>
+            </div>
+            <a
+              href="/faculty"
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs whitespace-nowrap"
+            >
+              Open Analytics Hub →
+            </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

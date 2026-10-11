@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCampus } from "../context/CampusContext";
 import { useSettings } from "../context/SettingsContext";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 import GlassCard from "../components/GlassCard";
@@ -29,18 +30,19 @@ function Toggle({ id, checked, onChange, label }: ToggleProps) {
   return (
     <button
       id={id}
+      type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative w-10 h-5.5 rounded-full transition-colors ${
-        checked ? "bg-indigo-500" : "bg-slate-200 dark:bg-slate-700"
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+        checked ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"
       }`}
-      style={{ minWidth: "40px", height: "22px" }}
     >
       <span
-        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-[19px]" : "translate-x-0.5"
+        aria-hidden="true"
+        className={`pointer-events-none absolute top-0.5 left-0.5 inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
+          checked ? "translate-x-5" : "translate-x-0"
         }`}
       />
     </button>
@@ -146,12 +148,36 @@ export default function SettingsPage() {
       setPasswordError("New passwords do not match.");
       return;
     }
-    // Mock save
-    setTimeout(() => {
-      setPasswordSuccess(true);
-      playSound("success");
-      setTimeout(() => setActiveModal(null), 1500);
-    }, 500);
+    
+    if (isSupabaseConfigured()) {
+      supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
+        if (error) {
+          setPasswordError(error.message);
+        } else {
+          setPasswordSuccess(true);
+          playSound("success");
+          setTimeout(() => {
+            setActiveModal(null);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+          }, 1500);
+        }
+      }).catch((err: any) => {
+        setPasswordError(err.message || "Failed to update password");
+      });
+    } else {
+      setTimeout(() => {
+        setPasswordSuccess(true);
+        playSound("success");
+        setTimeout(() => {
+          setActiveModal(null);
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        }, 1500);
+      }, 500);
+    }
   }
 
   if (!currentUser) return null;
@@ -291,7 +317,19 @@ export default function SettingsPage() {
             description="Deadlines, quiz reminders"
             toggle
             checked={settings.pushNotificationsEnabled}
-            onToggle={(val) => updateSettings({ pushNotificationsEnabled: val })}
+            onToggle={async (val) => {
+              updateSettings({ pushNotificationsEnabled: val });
+              if (val) {
+                playSound("notification");
+                if ("Notification" in window && Notification.permission === "default") {
+                  try {
+                    await Notification.requestPermission();
+                  } catch (e) {
+                    console.warn("Notification permission error:", e);
+                  }
+                }
+              }
+            }}
             toggleId="toggle-notifications"
           />
           <SettingRow
@@ -315,8 +353,7 @@ export default function SettingsPage() {
             onToggle={(val) => {
               updateSettings({ soundEffectsEnabled: val });
               if (val) {
-                // Manually play sound to demonstrate it turning on
-                console.log("[Sound System] Playing success sound.");
+                playSound("success");
               }
             }}
             toggleId="toggle-sounds"

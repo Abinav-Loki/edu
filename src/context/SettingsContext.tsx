@@ -23,7 +23,7 @@ const defaultSettings: UserSettings = {
 interface SettingsContextType {
   settings: UserSettings;
   updateSettings: (updates: Partial<UserSettings>) => void;
-  playSound: (type: "success" | "notification") => void;
+  playSound: (type: "success" | "notification" | "click") => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -65,10 +65,47 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({ ...prev, ...updates }));
   };
 
-  const playSound = (type: "success" | "notification") => {
+  const playSound = (type: "success" | "notification" | "click") => {
     if (!settings.soundEffectsEnabled) return;
-    // In a real app we would play an Audio element here.
-    console.log(`[Sound System] Playing ${type} sound.`);
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === "success") {
+        // High pleasant two-tone chime (523Hz -> 659Hz)
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+      } else if (type === "notification") {
+        // Pleasant pop alert (440Hz -> 880Hz)
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.25);
+      } else {
+        // Crisp click (800Hz quick tap)
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.05);
+      }
+    } catch (e) {
+      console.warn("[Sound System] Audio synthesis error:", e);
+    }
   };
 
   return (

@@ -1,21 +1,34 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Lightbulb, BookOpen, Code2, Bot, Paperclip, FileText, X, Upload } from "lucide-react";
-import { initialChatMessages, type ChatMessage } from "../data/mock";
+import {
+  Send,
+  BookOpen,
+  Code2,
+  Bot,
+  Sparkles,
+  Compass,
+  CheckCircle2,
+  BarChart3,
+  AlertTriangle
+} from "lucide-react";
+import { type ChatMessage, student, weakTopics, recentActivity, recoveryPlan } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
+import { useLearning } from "../context/LearningContext";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { fetchTutorMessagesFromDB, saveTutorMessageToDB } from "../services/supabaseService";
+import { generateCopilotResponse } from "../services/copilot";
+import { CopilotStudentContext } from "../services/copilot/types";
+import {
+  calculateStudentSuccessScoreBreakdown,
+  getExplainableRiskFlags
+} from "../intelligence/analyticsService";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 
-let msgCounter = initialChatMessages.length + 1;
-
-interface AttachedFileState {
-  name: string;
-  size: string;
-  type: string;
-  content?: string;
-}
+let msgCounter = 10;
 
 function TypingIndicator() {
   return (
-    <div className="flex items-end gap-2 mb-4" aria-live="polite" aria-label="AI is typing">
+    <div className="flex items-end gap-2 mb-4" aria-live="polite" aria-label="AI Copilot is typing">
       <div className="w-8 h-8 rounded-full primary-gradient flex items-center justify-center shrink-0">
         <Bot className="w-4 h-4 text-white" aria-hidden="true" />
       </div>
@@ -28,7 +41,7 @@ function TypingIndicator() {
   );
 }
 
-function BotMessage({ message }: { message: ChatMessage }) {
+function BotMessage({ message, onFollowUp }: { message: ChatMessage; onFollowUp?: (text: string) => void }) {
   return (
     <div className="flex items-end gap-2 mb-4">
       <div
@@ -37,10 +50,25 @@ function BotMessage({ message }: { message: ChatMessage }) {
       >
         <Bot className="w-4 h-4 text-white" />
       </div>
-      <div className="flex flex-col gap-1 max-w-[80%]">
+      <div className="flex flex-col gap-1 max-w-[85%]">
         <div className="chat-bubble-bot text-sm text-slate-700 leading-relaxed whitespace-pre-line">
           {message.content}
         </div>
+
+        {message.suggestedFollowUps && message.suggestedFollowUps.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {message.suggestedFollowUps.map((fu, idx) => (
+              <button
+                key={idx}
+                onClick={() => onFollowUp?.(fu)}
+                className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1 rounded-lg border border-indigo-100 transition cursor-pointer"
+              >
+                💡 {fu}
+              </button>
+            ))}
+          </div>
+        )}
+        
         <span className="text-[10px] text-slate-400 ml-1">{message.timestamp}</span>
       </div>
     </div>
@@ -51,13 +79,6 @@ function UserMessage({ message }: { message: ChatMessage }) {
   return (
     <div className="flex items-end justify-end gap-2 mb-4">
       <div className="flex flex-col gap-1 items-end max-w-[80%]">
-        {message.attachedFile && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-semibold mb-1 shadow-sm">
-            <FileText className="w-3.5 h-3.5 text-sky-200" />
-            <span className="truncate max-w-[180px]">{message.attachedFile.name}</span>
-            <span className="text-[10px] opacity-80 font-mono">({message.attachedFile.size})</span>
-          </div>
-        )}
         <div className="chat-bubble-user text-sm leading-relaxed">
           {message.content}
         </div>
@@ -67,197 +88,176 @@ function UserMessage({ message }: { message: ChatMessage }) {
   );
 }
 
-const quickActions = [
-  { id: "hint", label: "Hint", icon: Lightbulb, color: "text-amber-600" },
-  { id: "explain", label: "Explain", icon: BookOpen, color: "text-indigo-600" },
-  { id: "example", label: "Show Example", icon: Code2, color: "text-emerald-600" },
+const suggestedPrompts = [
+  { id: "status", label: "My Academic Status", icon: BarChart3, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+  { id: "quizzes", label: "How many quizzes finished?", icon: CheckCircle2, color: "text-violet-700 bg-violet-50 border-violet-200" },
+  { id: "weak", label: "What are my weak topics?", icon: AlertTriangle, color: "text-amber-700 bg-amber-50 border-amber-200" },
+  { id: "explain", label: "Explain a concept", icon: BookOpen, color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+  { id: "exam", label: "Help me prepare for an exam", icon: Sparkles, color: "text-sky-700 bg-sky-50 border-sky-200" },
+  { id: "strategy", label: "Create a study strategy", icon: Compass, color: "text-teal-700 bg-teal-50 border-teal-200" },
+  { id: "debug", label: "Help me debug code", icon: Code2, color: "text-rose-700 bg-rose-50 border-rose-200" }
 ];
 
 export default function TutorPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialChatMessages);
+  const { currentUser, students } = useCampus();
+  const { profile } = useLearning();
+
+  const currentStudent =
+    (currentUser?.role === "student" ? (currentUser as any) : null) ||
+    students.find((s) => s.id === currentUser?.id) ||
+    students[0];
+
+  const studentName = currentStudent?.name || currentUser?.name || student.name || "Student";
+  const studentId = currentStudent?.id || currentUser?.id || "s1";
+
+  // Initial personalized welcoming message
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    {
+      id: "msg-welcome",
+      role: "bot",
+      content: `Hello ${studentName}! 👋 I am your **CampusOS AI Copilot**.
+
+I can answer any question about your **academic status**, how many quizzes you have finished, attendance, assignments, and weak topics — or help you understand concepts and debug code.
+
+How can I help you today?`,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      suggestedFollowUps: [
+        "Tell me about my academic status",
+        "How many quizzes have I finished?",
+        "What are my weak topics?",
+        "What is my attendance status?"
+      ]
+    }
+  ]);
+
   const [input, setInput] = useState("");
-  const [attachedFile, setAttachedFile] = useState<AttachedFileState | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load chat history from Supabase if configured
+  useEffect(() => {
+    if (isSupabaseConfigured() && currentUser?.id) {
+      fetchTutorMessagesFromDB(currentUser.id).then(dbMessages => {
+        if (dbMessages && dbMessages.length > 0) {
+          const cleaned = (dbMessages as ChatMessage[]).map(m => ({
+            ...m,
+            sources: undefined
+          }));
+          setMessages(cleaned);
+        }
+      }).catch(console.error);
+    }
+  }, [currentUser?.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const sizeFormatted = file.size > 1024 * 1024
-      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-      : `${Math.round(file.size / 1024)} KB`;
-
-    const isTextFile =
-      file.type.startsWith("text/") ||
-      file.name.endsWith(".md") ||
-      file.name.endsWith(".json") ||
-      file.name.endsWith(".js") ||
-      file.name.endsWith(".ts") ||
-      file.name.endsWith(".py") ||
-      file.name.endsWith(".sql") ||
-      file.name.endsWith(".csv");
-
-    if (isTextFile) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        setAttachedFile({
-          name: file.name,
-          size: sizeFormatted,
-          type: file.type || "Document",
-          content: text,
-        });
-      };
-      reader.readAsText(file);
-    } else {
-      setAttachedFile({
-        name: file.name,
-        size: sizeFormatted,
-        type: file.type || "Document",
-      });
-    }
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }
-
   async function sendMessage(content: string) {
-    if (!content.trim() && !attachedFile) return;
+    if (!content.trim()) return;
 
-    const currentFile = attachedFile;
-    const userText = content.trim() || (currentFile ? `Please analyze the uploaded file: ${currentFile.name}` : "");
+    const userText = content.trim();
     const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     const userMsg: ChatMessage = {
-      id: `msg-${++msgCounter}`,
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       role: "user",
       content: userText,
-      timestamp: now,
-      attachedFile: currentFile
-        ? {
-            name: currentFile.name,
-            size: currentFile.size,
-            type: currentFile.type,
-          }
-        : undefined,
+      timestamp: now
     };
 
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
-    setAttachedFile(null);
     setIsTyping(true);
 
+    if (isSupabaseConfigured()) {
+      saveTutorMessageToDB({
+        id: userMsg.id,
+        studentId: currentUser?.id || "s1",
+        role: "user",
+        content: userMsg.content,
+        timestamp: new Date().toISOString()
+      }).catch(console.error);
+    }
+
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API key is not configured. Please ensure VITE_GEMINI_API_KEY or GEMINI_API_KEY is set in your .env file.");
-      }
+      // Gather live student academic and learning context
+      const breakdown = calculateStudentSuccessScoreBreakdown(studentId);
+      const risks = getExplainableRiskFlags(studentId);
 
-      // Prepare text content including attached file data for Gemini
-      let promptWithFile = userText;
-      if (currentFile) {
-        if (currentFile.content) {
-          promptWithFile = `[ATTACHED FILE: ${currentFile.name} (${currentFile.size})]\n\`\`\`\n${currentFile.content.slice(0, 3000)}\n\`\`\`\n\nUSER PROMPT: ${userText}`;
-        } else {
-          promptWithFile = `[ATTACHED DOCUMENT: ${currentFile.name} (${currentFile.size})]\n\nUSER PROMPT: ${userText}`;
-        }
-      }
+      const copilotContext: CopilotStudentContext = {
+        studentId,
+        studentName,
+        course: currentStudent?.course || student.course || "B.Tech IT",
+        year: currentStudent?.year || student.year || "3rd Year",
+        email: currentStudent?.email || "arun.k@student.edu",
+        attendancePercent: currentStudent?.attendancePercent ?? student.attendancePercent ?? 65,
+        attendanceTrend: student.attendanceTrend ?? -7,
+        quizAverage: currentStudent?.quizAverage ?? student.quizAverage ?? 49,
+        quizTrend: student.quizTrend ?? -18,
+        quizzesCompleted: profile?.quizzesCompleted ?? 24,
+        quizAccuracy: profile?.quizAccuracy ?? 86,
+        assignmentAverage: currentStudent?.assignmentAverage ?? student.assignmentAverage ?? 72,
+        assignmentTrend: student.assignmentTrend ?? -12,
+        totalAssignments: currentStudent?.totalAssignments ?? student.totalAssignments ?? 10,
+        lateSubmissions: currentStudent?.lateSubmissions ?? student.lateSubmissions ?? 2,
+        weakTopics: currentStudent?.weakTopics && currentStudent.weakTopics.length > 0
+          ? currentStudent.weakTopics
+          : weakTopics.map((w) => w.name),
+        learningLevel: profile?.level ?? 12,
+        totalXP: profile?.totalXP ?? 1840,
+        arenaCoins: profile?.arenaCoins ?? 1250,
+        streak: profile?.streak ?? 7,
+        longestStreak: profile?.longestStreak ?? 14,
+        currentFocus: profile?.currentFocus || "DBMS Normalization",
+        successScore: breakdown?.overallScore ?? 64,
+        riskFlags: risks.map((r) => `${r.title}: ${r.reason}`),
+        recentActivities: recentActivity.map((a) => ({
+          title: a.title,
+          detail: a.detail,
+          time: a.time,
+        })),
+        recoveryPlan: {
+          title: recoveryPlan.title,
+          focus: recoveryPlan.focus,
+          days: recoveryPlan.days,
+          completedTasks: recoveryPlan.completedTasks,
+          totalTasks: recoveryPlan.tasks,
+          currentDay: recoveryPlan.currentDay,
+        },
+      };
 
-      // Format history for Gemini API
-      const geminiContents = newMessages.map((msg, index) => {
-        const isLastMsg = index === newMessages.length - 1;
-        return {
-          role: msg.role === "bot" ? "model" : "user",
-          parts: [{ text: isLastMsg ? promptWithFile : msg.content }]
-        };
-      });
-
-      // Try multiple model endpoints in order for maximum compatibility and resilience
-      const modelsToTry = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
-        "gemini-flash-latest"
-      ];
-
-      let replyText = "";
-      let lastErrorMessage = "";
-
-      for (const model of modelsToTry) {
-        let attempts = 0;
-        const maxAttempts = 2;
-
-        while (attempts < maxAttempts && !replyText) {
-          try {
-            attempts++;
-            const response = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  systemInstruction: {
-                    parts: [{ text: "You are the AI-Copilot for CampusOS, an educational platform. Your role is to act as a Socratic tutor. You MUST ONLY answer education-related questions. If the user uploads a document or asks about study material, analyze it thoroughly and guide them step-by-step. Keep your answers concise, encouraging, and formatted with markdown when appropriate." }]
-                  },
-                  contents: geminiContents
-                })
-              }
-            );
-
-            const data = await response.json();
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.[0]?.text) {
-              replyText = data.candidates[0].content.parts[0].text;
-              break;
-            } else if (data.error) {
-              lastErrorMessage = data.error.message;
-              if (data.error.message?.toLowerCase().includes("demand") || data.error.code === 503 || data.error.code === 429) {
-                await new Promise((res) => setTimeout(res, 600));
-              } else {
-                break;
-              }
-            }
-          } catch (e: any) {
-            lastErrorMessage = e.message;
-            break;
-          }
-        }
-
-        if (replyText) break;
-      }
-
-      if (!replyText) {
-        replyText = lastErrorMessage
-          ? `⚠️ ${lastErrorMessage}\n\n*Note: Google's free Gemini API endpoints are currently experiencing temporary high traffic. Please try sending your message again in a few seconds.*`
-          : "I'm having trouble analyzing this right now. Please check your connection.";
-      }
+      // Generate AI Copilot Response with live student context
+      const response = await generateCopilotResponse(userText, copilotContext);
 
       const botResponse: ChatMessage = {
-        id: `msg-${++msgCounter}`,
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         role: "bot",
-        content: replyText,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        content: response.replyText,
+        timestamp: response.timestamp,
+        suggestedFollowUps: response.suggestedFollowUps
       };
       
       setMessages((prev) => [...prev, botResponse]);
+
+      if (isSupabaseConfigured()) {
+        saveTutorMessageToDB({
+          id: botResponse.id,
+          studentId: currentUser?.id || "s1",
+          role: "bot",
+          content: botResponse.content,
+          timestamp: new Date().toISOString()
+        }).catch(console.error);
+      }
     } catch (err: any) {
       const errorResponse: ChatMessage = {
         id: `msg-${++msgCounter}`,
         role: "bot",
-        content: `Connection error: ${err.message}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        content: `I'm temporarily having trouble responding. ${err.message || "Please try again."}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       };
       setMessages((prev) => [...prev, errorResponse]);
     } finally {
@@ -265,62 +265,44 @@ export default function TutorPage() {
     }
   }
 
-  function handleQuickAction(actionId: string) {
-    let prompt = "";
-    if (actionId === "hint") prompt = "Can you give me a small hint to help me figure out the answer on my own?";
-    if (actionId === "explain") prompt = "Can you explain this concept to me simply?";
-    if (actionId === "example") prompt = "Can you show me a practical example of this?";
-    
-    if (prompt) {
-      sendMessage(prompt);
-    }
+  function handlePromptClick(label: string) {
+    let promptText = label;
+    if (label.includes("Academic Status")) promptText = "Tell me about my academic status";
+    else if (label.includes("quizzes finished")) promptText = "How many quizzes have I finished?";
+    else if (label.includes("weak topics")) promptText = "What are my weak topics and where do I need to improve?";
+    else if (label.includes("Explain")) promptText = "Explain database normalization in simple terms.";
+    else if (label.includes("prepare")) promptText = "How should I prepare for my upcoming Computer Science semester exams?";
+    else if (label.includes("strategy")) promptText = "Create a high-yield study strategy for Data Structures and Algorithms.";
+    else if (label.includes("debug")) promptText = "How do I systematically debug recursion and memory leak errors in code?";
+
+    sendMessage(promptText);
   }
 
   return (
     <>
       <MobileHeader />
-      <div className="flex flex-col h-full mobile-content">
+      <div className="flex flex-col h-full mobile-content max-w-4xl mx-auto w-full">
         {/* Header */}
         <div className="px-4 sm:px-6 lg:px-8 pt-5 pb-3 shrink-0">
           <PageHeader
-            title="AI Tutor"
-            subtitle="Socratic Learning • Upload & analyze study materials"
-            badge="AI-Powered"
+            title="AI Copilot"
+            subtitle="Your everyday AI study companion • Real-time academic status, quiz insights & study guidance"
+            badge="General AI"
           />
 
-          {/* Quick actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {quickActions.map(({ id, label, icon: Icon, color }) => (
+          {/* Suggested prompts carousel / pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {suggestedPrompts.map(({ id, label, icon: Icon, color }) => (
               <button
                 key={id}
-                onClick={() => handleQuickAction(id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/70 border border-white/80 text-xs font-semibold ${color} hover:bg-white transition min-h-[44px] cursor-pointer`}
+                onClick={() => handlePromptClick(label)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold ${color} hover:opacity-90 transition min-h-[40px] shrink-0 cursor-pointer border`}
                 aria-label={label}
               >
                 <Icon className="w-3.5 h-3.5" aria-hidden="true" />
                 {label}
               </button>
             ))}
-
-            {/* Upload Material Shortcut */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-50 border border-sky-100 text-xs font-semibold text-sky-700 hover:bg-sky-100 transition min-h-[44px] cursor-pointer"
-              aria-label="Upload document or study material"
-            >
-              <Upload className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Upload Material</span>
-            </button>
-
-            {/* Hint shortcut */}
-            <button
-              onClick={() => handleQuickAction("hint")}
-              className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition min-h-[44px] cursor-pointer"
-              aria-label="Give me a hint"
-            >
-              <Lightbulb className="w-3.5 h-3.5" aria-hidden="true" />
-              💡 Give me a hint
-            </button>
           </div>
         </div>
 
@@ -328,12 +310,12 @@ export default function TutorPage() {
         <div
           className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4"
           role="log"
-          aria-label="Chat messages"
+          aria-label="AI Copilot Messages"
           aria-live="polite"
         >
           {messages.map((msg) =>
             msg.role === "bot" ? (
-              <BotMessage key={msg.id} message={msg} />
+              <BotMessage key={msg.id} message={msg} onFollowUp={(text) => sendMessage(text)} />
             ) : (
               <UserMessage key={msg.id} message={msg} />
             )
@@ -344,48 +326,7 @@ export default function TutorPage() {
 
         {/* Input area */}
         <div className="px-4 sm:px-6 lg:px-8 pb-4 shrink-0">
-          {/* Hidden File Input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileSelect}
-            accept=".pdf,.docx,.doc,.txt,.md,.csv,.json,.js,.ts,.py,.sql,.png,.jpg,.jpeg"
-            className="hidden"
-          />
-
-          {/* Attachment Preview Box */}
-          {attachedFile && (
-            <div className="mb-2 p-2.5 px-3.5 rounded-xl bg-sky-50 dark:bg-slate-800 border border-sky-200 dark:border-slate-700 flex items-center justify-between gap-3 animate-[fadeIn_0.2s_ease-out]">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-800 dark:text-white truncate">{attachedFile.name}</p>
-                  <p className="text-[10px] font-semibold text-sky-600 dark:text-sky-400">{attachedFile.size} • Ready for AI analysis</p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setAttachedFile(null)}
-                className="w-6 h-6 rounded-lg bg-slate-200/80 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                aria-label="Remove attached file"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
           <div className="glass-card !rounded-2xl p-2 flex items-center gap-2">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
-              title="Attach file or study material"
-              aria-label="Attach file"
-            >
-              <Paperclip className="w-4.5 h-4.5" />
-            </button>
-
             <input
               ref={inputRef}
               type="text"
@@ -397,15 +338,15 @@ export default function TutorPage() {
                   sendMessage(input);
                 }
               }}
-              placeholder={attachedFile ? `Ask AI about ${attachedFile.name}...` : "Type your response..."}
-              className="flex-1 bg-transparent text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none px-2 py-2 min-h-[44px]"
-              aria-label="Type your message to the AI tutor"
+              placeholder="Ask about your academic status, how many quizzes you finished, doubts, or study plans..."
+              className="flex-1 bg-transparent text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none px-3 py-2 min-h-[44px]"
+              aria-label="Type your message to AI Copilot"
             />
             
             <button
               onClick={() => sendMessage(input)}
-              disabled={!input.trim() && !attachedFile}
-              className="btn-primary !rounded-xl !px-3.5 !py-2.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              disabled={!input.trim()}
+              className="btn-primary !rounded-xl !px-4 !py-2.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
               aria-label="Send message"
             >
               <Send className="w-4 h-4" aria-hidden="true" />
@@ -416,4 +357,3 @@ export default function TutorPage() {
     </>
   );
 }
-
